@@ -93,15 +93,7 @@ void* OPS_H5DRM()
     double factor = 1.0;
     OPS_GetDoubleInput(&num, &factor);
 
-    double crd_scale = 1.0;
-
-    if (OPS_GetNumRemainingInputArgs() < 3)
-    {
-        OPS_GetDoubleInput(&num, &crd_scale);
-        opserr << "crd_scale = " << crd_scale << endln;
-    }
-
-    thePattern = new H5DRM(tag, filename, factor, crd_scale);
+    thePattern = new H5DRM(tag, filename, factor);
 
     return thePattern;
 }
@@ -129,8 +121,7 @@ H5DRM::H5DRM()
       DRMDisplacements(100),
       DRMAccelerations(100),
       last_integration_time(0),
-      crd_scale(0),
-      distance_tolerance(0),
+      crd_scale(1000),
       maxnodetag(0),
       station_id2data_pos(100)
 {
@@ -145,6 +136,11 @@ H5DRM::H5DRM()
 
     myrank = 0;
 #ifdef _PARALLEL_PROCESSING
+	// //jfhuang output current rank for parallel debug
+	// opserr << "************************************************************"<< endln;
+	// opserr << "H5DRM::H5DRM() -- _PARALLEL_PROCESSING is defined! " << endln;
+	// opserr << "************************************************************"<< endln;
+
     MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 #endif
     H5DRMout << "H5DRM - empty constructor\n";
@@ -154,8 +150,7 @@ H5DRM::H5DRM(
     int tag,
     std::string HDF5filename_,
     double cFactor_,
-    double crd_scale_,
-    double distance_tolerance_)
+    double crd_scale_)
     : LoadPattern(tag, PATTERN_TAG_H5DRM),
       HDF5filename(HDF5filename_),
       DRMForces(100),
@@ -163,7 +158,6 @@ H5DRM::H5DRM(
       DRMAccelerations(100),
       last_integration_time(0),
       crd_scale(crd_scale_),
-      distance_tolerance(distance_tolerance_),
       maxnodetag(0),
       station_id2data_pos(100)
 {
@@ -177,6 +171,11 @@ H5DRM::H5DRM(
     step = step1 = step2 = 0;
     myrank = 0;
 #ifdef _PARALLEL_PROCESSING
+	// //jfhuang output current rank for parallel debug
+	// opserr << "************************************************************"<< endln;
+	// opserr << "H5DRM::H5DRM() -- _PARALLEL_PROCESSING is defined! " << endln;
+	// opserr << "************************************************************"<< endln;	
+
     MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 #endif
 
@@ -231,28 +230,25 @@ void H5DRM::intitialize()
     // MAP DRM data to local domain
     //===========================================================================
 
-    for (int i = 0; i < 10; ++i)
-    {
-        // Plane * newplane = new Plane(id_drm_file, i);
-        // planes.push_back(newplane);
-    }
-
-
-    H5DRMout << "Initialize" << endln;
+    //for (int i = 0; i < 10; ++i)
+    //{
+    //    Plane * newplane = new Plane(id_drm_file, i);
+    //    planes.push_back(newplane);
+    //}
 
     ID internal;
     Matrix xyz;
     Vector drmbox_x0;
-    read_double_dataset_into_vector(id_drm_file, "DRM_Metadata/drmbox_x0", drmbox_x0);
+    //read_double_dataset_into_vector(id_drm_file, "DRM_Metadata/drmbox_x0", drmbox_x0);
     read_double_dataset_into_matrix(id_drm_file, "DRM_Data/xyz", xyz);
     read_int_dataset_into_id(id_drm_file, "DRM_Data/internal", internal);
     read_int_dataset_into_id(id_drm_file, "DRM_Data/data_location", station_id2data_pos);
-    read_scalar_double_dataset_into_double(id_drm_file, "DRM_Metadata/drmbox_xmax", drmbox_xmax);
-    read_scalar_double_dataset_into_double(id_drm_file, "DRM_Metadata/drmbox_xmin", drmbox_xmin);
-    read_scalar_double_dataset_into_double(id_drm_file, "DRM_Metadata/drmbox_ymax", drmbox_ymax);
-    read_scalar_double_dataset_into_double(id_drm_file, "DRM_Metadata/drmbox_ymin", drmbox_ymin);
-    read_scalar_double_dataset_into_double(id_drm_file, "DRM_Metadata/drmbox_zmax", drmbox_zmax);
-    read_scalar_double_dataset_into_double(id_drm_file, "DRM_Metadata/drmbox_zmin", drmbox_zmin);
+    //read_scalar_double_dataset_into_double(id_drm_file, "DRM_Metadata/drmbox_xmax", drmbox_xmax);
+    //read_scalar_double_dataset_into_double(id_drm_file, "DRM_Metadata/drmbox_xmin", drmbox_xmin);
+    //read_scalar_double_dataset_into_double(id_drm_file, "DRM_Metadata/drmbox_ymax", drmbox_ymax);
+    //read_scalar_double_dataset_into_double(id_drm_file, "DRM_Metadata/drmbox_ymin", drmbox_ymin);
+    //read_scalar_double_dataset_into_double(id_drm_file, "DRM_Metadata/drmbox_zmax", drmbox_zmax);
+    //read_scalar_double_dataset_into_double(id_drm_file, "DRM_Metadata/drmbox_zmin", drmbox_zmin);
     read_scalar_double_dataset_into_double(id_drm_file, "DRM_Metadata/dt", dt);
     read_scalar_double_dataset_into_double(id_drm_file, "DRM_Metadata/tstart", tstart);
     read_scalar_double_dataset_into_double(id_drm_file, "DRM_Metadata/tend", tend);
@@ -262,20 +258,20 @@ void H5DRM::intitialize()
     // last_integration_time = tstart;
     last_integration_time = theDomain->getCurrentTime();
 
-    xyz *= crd_scale;
-    drmbox_x0 *= crd_scale;
-    drmbox_xmax *= crd_scale;
-    drmbox_xmin *= crd_scale;
-    drmbox_ymax *= crd_scale;
-    drmbox_ymin *= crd_scale;
-    drmbox_zmax *= crd_scale;
-    drmbox_zmin *= crd_scale;
+    //xyz *= crd_scale;
+    //drmbox_x0 *= crd_scale;
+    //drmbox_xmax *= crd_scale;
+    //drmbox_xmin *= crd_scale;
+    //drmbox_ymax *= crd_scale;
+    //drmbox_ymin *= crd_scale;
+    //drmbox_zmax *= crd_scale;
+    //drmbox_zmin *= crd_scale;
 
-    convert_h5drmcrd_to_ops_crd(drmbox_x0);
-    convert_h5drmcrd_to_ops_crd(xyz);
+    //convert_h5drmcrd_to_ops_crd(drmbox_x0);
+    //convert_h5drmcrd_to_ops_crd(xyz);
 
     int NDRM_points = xyz.noRows();
-    double d_tol = distance_tolerance;
+    double d_tol = 3.0;
     double d_err = 0;
     int n_nodes_found = 0;
 
@@ -285,77 +281,77 @@ void H5DRM::intitialize()
     if (myrank == 0)
     {
         H5DRMout << "Dataset has " << NDRM_points << " data-points\n";
-        opserr << "drmbox_x0   =  " << drmbox_x0 << " \n";
-        opserr << "drmbox_xmax =  " << drmbox_xmax << " \n";
-        opserr << "drmbox_xmin =  " << drmbox_xmin << " \n";
-        opserr << "drmbox_ymax =  " << drmbox_ymax << " \n";
-        opserr << "drmbox_ymin =  " << drmbox_ymin << " \n";
-        opserr << "drmbox_zmax =  " << drmbox_zmax << " \n";
-        opserr << "drmbox_zmin =  " << drmbox_zmin << " \n";
-        opserr << "dx =  " << drmbox_xmax - drmbox_xmin << " \n";
-        opserr << "dy =  " << drmbox_ymax - drmbox_ymin << " \n";
-        opserr << "dz =  " << drmbox_zmax - drmbox_zmin << " \n";
+        //opserr << "drmbox_x0   =  " << drmbox_x0 << " \n";
+        //opserr << "drmbox_xmax =  " << drmbox_xmax << " \n";
+        //opserr << "drmbox_xmin =  " << drmbox_xmin << " \n";
+        //opserr << "drmbox_ymax =  " << drmbox_ymax << " \n";
+        //opserr << "drmbox_ymin =  " << drmbox_ymin << " \n";
+        //opserr << "drmbox_zmax =  " << drmbox_zmax << " \n";
+        //opserr << "drmbox_zmin =  " << drmbox_zmin << " \n";
+        //opserr << "dx =  " << drmbox_xmax - drmbox_xmin << " \n";
+        //opserr << "dy =  " << drmbox_ymax - drmbox_ymin << " \n";
+        //opserr << "dz =  " << drmbox_zmax - drmbox_zmin << " \n";
     }
 
-    if (myrank == 0)
-    {
-        char viewstations[100];
-        sprintf(viewstations, "stations.msh");
-        FILE * fptr = fopen(viewstations, "w");
-        fprintf(fptr, "$MeshFormat\n");
-        fprintf(fptr, "2.2 0 8\n");
-        fprintf(fptr, "$EndMeshFormat\n");
-        fprintf(fptr, "$Nodes\n");
-        fprintf(fptr, "%d\n", NDRM_points);
-        for (int i = 0; i < NDRM_points; ++i)
-        {
-            fprintf(fptr, "%d %f %f %f\n", i + 1, xyz(i, 0), xyz(i, 1), xyz(i, 2));
-        }
-        fprintf(fptr, "$EndNodes\n");
-        fprintf(fptr, "$Elements\n");
-        fprintf(fptr, "%d\n", NDRM_points);
-        for (int i = 0; i < NDRM_points; ++i)
-        {
-            fprintf(fptr, "%d 15 2 1 1 %d\n", i + 1, i + 1);
-        }
-        fprintf(fptr, "$EndElements\n");
-        fclose(fptr);
-    }
+    //if (myrank == 0)
+    //{
+    //    char viewstations[100];
+    //    sprintf(viewstations, "stations.msh");
+    //    FILE * fptr = fopen(viewstations, "w");
+    //    fprintf(fptr, "$MeshFormat\n");
+    //    fprintf(fptr, "2.2 0 8\n");
+    //    fprintf(fptr, "$EndMeshFormat\n");
+    //    fprintf(fptr, "$Nodes\n");
+    //    fprintf(fptr, "%d\n", NDRM_points);
+    //    for (int i = 0; i < NDRM_points; ++i)
+    //    {
+    //        fprintf(fptr, "%d %f %f %f\n", i + 1, xyz(i, 0), xyz(i, 1), xyz(i, 2));
+    //    }
+    //    fprintf(fptr, "$EndNodes\n");
+    //    fprintf(fptr, "$Elements\n");
+    //    fprintf(fptr, "%d\n", NDRM_points);
+    //    for (int i = 0; i < NDRM_points; ++i)
+    //    {
+    //        fprintf(fptr, "%d 15 2 1 1 %d\n", i + 1, i + 1);
+    //    }
+    //    fprintf(fptr, "$EndElements\n");
+    //    fclose(fptr);
+    //}
 
-    char viewdrm[100];
-    sprintf(viewdrm, "drm.%d.msh", myrank);
-    FILE * fptrdrm = fopen(viewdrm, "w");
+    //char viewdrm[100];
+    //sprintf(viewdrm, "drm.%d.msh", myrank);
+    //FILE * fptrdrm = fopen(viewdrm, "w");
 
-    fprintf(fptrdrm, "$MeshFormat\n");
-    fprintf(fptrdrm, "2.2 0 8\n");
-    fprintf(fptrdrm, "$EndMeshFormat\n");
-    fprintf(fptrdrm, "$Nodes\n");
-    fprintf(fptrdrm, "%d\n", theDomain->getNumNodes());
+    //fprintf(fptrdrm, "$MeshFormat\n");
+    //fprintf(fptrdrm, "2.2 0 8\n");
+    //fprintf(fptrdrm, "$EndMeshFormat\n");
+    //fprintf(fptrdrm, "$Nodes\n");
+    //fprintf(fptrdrm, "%d\n", theDomain->getNumNodes());
 
-    NodeIter& node_iter = theDomain->getNodes();
-    Node* node_ptr = 0;
-    int drmtag = NDRM_points;
-    while ((node_ptr = node_iter()) != 0)
-    {
-        const Vector& xyz_node = node_ptr->getCrds();
-        fprintf(fptrdrm, "%d %f %f %f\n", ++drmtag, xyz_node(0), xyz_node(1), xyz_node(2));
-    }
-    fprintf(fptrdrm, "$EndNodes\n");
-
-
-    fprintf(fptrdrm, "$Elements\n");
-    fprintf(fptrdrm, "%d\n", theDomain->getNumNodes());
-    int ndrmpoint = drmtag - 1;
-    drmtag = n_nodes_found + 1;
-    for (int i = 0; i < ndrmpoint; ++i)
-    {
-        fprintf(fptrdrm, "%d 15 2 1 %d %d\n", drmtag, 5 + myrank, drmtag);
-        ++drmtag;
-    }
-    fprintf(fptrdrm, "$EndElements\n");
+    //NodeIter& node_iter = theDomain->getNodes();
+    //Node* node_ptr = 0;
+    //int drmtag = NDRM_points;
+    //while ((node_ptr = node_iter()) != 0)
+    //{
+    //    const Vector& xyz_node = node_ptr->getCrds();
+    //    fprintf(fptrdrm, "%d %f %f %f\n", ++drmtag, xyz_node(0), xyz_node(1), xyz_node(2));
+    //}
+    //fprintf(fptrdrm, "$EndNodes\n");
 
 
-    fclose(fptrdrm);
+    //fprintf(fptrdrm, "$Elements\n");
+    //fprintf(fptrdrm, "%d\n", theDomain->getNumNodes());
+    //int ndrmpoint = drmtag - 1;
+    //drmtag = n_nodes_found + 1;
+    //for (int i = 0; i < ndrmpoint; ++i)
+    //{
+    //    fprintf(fptrdrm, "%d 15 2 1 %d %d\n", drmtag, 5 + myrank, drmtag);
+    //    ++drmtag;
+    //}
+    //fprintf(fptrdrm, "$EndElements\n");
+
+
+    //fclose(fptrdrm);
 
     H5DRMout << "Found and connected " << n_nodes_found << " nodes (d_err = " << d_err << ")\n";
     DRMForces.resize(3 * n_nodes_found);
@@ -366,27 +362,27 @@ void H5DRM::intitialize()
     DRMDisplacements.Zero();
     DRMAccelerations.Zero();
 
-    char mshfilename[100];
-    sprintf(mshfilename, "drmnodes.%d.msh", myrank);
-    FILE * fptr = fopen(mshfilename, "w");
-    fprintf(fptr, "$MeshFormat\n");
-    fprintf(fptr, "2.2 0 8\n");
-    fprintf(fptr, "$EndMeshFormat\n");
-    fprintf(fptr, "$NodeData\n");
-    fprintf(fptr, "    1\n");
-    fprintf(fptr, "\"DRM Nodes\"\n");
-    fprintf(fptr, "1\n");
-    fprintf(fptr, "0.0000000000e+00\n");
-    fprintf(fptr, "3\n");
-    fprintf(fptr, "0\n");
-    fprintf(fptr, "1\n");
-    fprintf(fptr, "%d\n", Nodes.Size());
-    for (int i = 0; i < Nodes.Size(); ++i)
-    {
-        fprintf(fptr, "%d %d\n", Nodes(i), 1 * IsBoundary(i) + 2 * (1 - IsBoundary(i)));
-    }
-    fprintf(fptr, "$EndNodeData\n");
-    fclose(fptr);
+    //char mshfilename[100];
+    //sprintf(mshfilename, "drmnodes.%d.msh", myrank);
+    //FILE * fptr = fopen(mshfilename, "w");
+    //fprintf(fptr, "$MeshFormat\n");
+    //fprintf(fptr, "2.2 0 8\n");
+    //fprintf(fptr, "$EndMeshFormat\n");
+    //fprintf(fptr, "$NodeData\n");
+    //fprintf(fptr, "    1\n");
+    //fprintf(fptr, "\"DRM Nodes\"\n");
+    //fprintf(fptr, "1\n");
+    //fprintf(fptr, "0.0000000000e+00\n");
+    //fprintf(fptr, "3\n");
+    //fprintf(fptr, "0\n");
+    //fprintf(fptr, "1\n");
+    //fprintf(fptr, "%d\n", Nodes.Size());
+    //for (int i = 0; i < Nodes.Size(); ++i)
+    //{
+    //    fprintf(fptr, "%d %d\n", Nodes(i), 1 * IsBoundary(i) + 2 * (1 - IsBoundary(i)));
+    //}
+    //fprintf(fptr, "$EndNodeData\n");
+    //fclose(fptr);
 
 
 
@@ -417,47 +413,47 @@ void H5DRM::intitialize()
 
 
     // char mshfilename[100];
-    sprintf(mshfilename, "drmelements.%d.msh", myrank);
-    fptr = fopen(mshfilename, "w");
-    fprintf(fptr, "$MeshFormat\n");
-    fprintf(fptr, "2.2 0 8\n");
-    fprintf(fptr, "$EndMeshFormat\n");
-    fprintf(fptr, "$ElementData\n");
-    fprintf(fptr, "    1\n");
-    fprintf(fptr, "\"DRM Elements\"\n");
-    fprintf(fptr, "1\n");
-    fprintf(fptr, "0.0000000000e+00\n");
-    fprintf(fptr, "3\n");
-    fprintf(fptr, "0\n");
-    fprintf(fptr, "1\n");
-    fprintf(fptr, "%d\n", Elements.Size());
-    for (int i = 0; i < Elements.Size(); ++i)
-    {
-        fprintf(fptr, "%d %d\n", Elements(i), 1);
-    }
-    fprintf(fptr, "$EndElementData\n");
-    fclose(fptr);
+    //sprintf(mshfilename, "drmelements.%d.msh", myrank);
+    //fptr = fopen(mshfilename, "w");
+    //fprintf(fptr, "$MeshFormat\n");
+    //fprintf(fptr, "2.2 0 8\n");
+    //fprintf(fptr, "$EndMeshFormat\n");
+    //fprintf(fptr, "$ElementData\n");
+    //fprintf(fptr, "    1\n");
+    //fprintf(fptr, "\"DRM Elements\"\n");
+    //fprintf(fptr, "1\n");
+    //fprintf(fptr, "0.0000000000e+00\n");
+    //fprintf(fptr, "3\n");
+    //fprintf(fptr, "0\n");
+    //fprintf(fptr, "1\n");
+    //fprintf(fptr, "%d\n", Elements.Size());
+    //for (int i = 0; i < Elements.Size(); ++i)
+    //{
+    //    fprintf(fptr, "%d %d\n", Elements(i), 1);
+    //}
+    //fprintf(fptr, "$EndElementData\n");
+    //fclose(fptr);
 
-    sprintf(mshfilename, "drmforces.%d.msh", myrank);
-    fptr = fopen(mshfilename, "w");
-    fprintf(fptr, "$MeshFormat\n");
-    fprintf(fptr, "2.2 0 8\n");
-    fprintf(fptr, "$EndMeshFormat\n");
-    fclose(fptr);
+    //sprintf(mshfilename, "drmforces.%d.msh", myrank);
+    //fptr = fopen(mshfilename, "w");
+    //fprintf(fptr, "$MeshFormat\n");
+    //fprintf(fptr, "2.2 0 8\n");
+    //fprintf(fptr, "$EndMeshFormat\n");
+    //fclose(fptr);
 
-    sprintf(mshfilename, "drmdisplacements.%d.msh", myrank);
-    fptr = fopen(mshfilename, "w");
-    fprintf(fptr, "$MeshFormat\n");
-    fprintf(fptr, "2.2 0 8\n");
-    fprintf(fptr, "$EndMeshFormat\n");
-    fclose(fptr);
+    //sprintf(mshfilename, "drmdisplacements.%d.msh", myrank);
+    //fptr = fopen(mshfilename, "w");
+    //fprintf(fptr, "$MeshFormat\n");
+    //fprintf(fptr, "2.2 0 8\n");
+    //fprintf(fptr, "$EndMeshFormat\n");
+    //fclose(fptr);
 
-    sprintf(mshfilename, "drmaccelerations.%d.msh", myrank);
-    fptr = fopen(mshfilename, "w");
-    fprintf(fptr, "$MeshFormat\n");
-    fprintf(fptr, "2.2 0 8\n");
-    fprintf(fptr, "$EndMeshFormat\n");
-    fclose(fptr);
+    //sprintf(mshfilename, "drmaccelerations.%d.msh", myrank);
+    //fptr = fopen(mshfilename, "w");
+    //fprintf(fptr, "$MeshFormat\n");
+    //fprintf(fptr, "2.2 0 8\n");
+    //fprintf(fptr, "$EndMeshFormat\n");
+    //fclose(fptr);
 
 
 
@@ -557,11 +553,11 @@ H5DRM::~H5DRM()
 {
     clean_all_data();
     // for (int i = 0; i < 10; ++i)
-    // for (auto iter = planes.begin(); iter != planes.end(); ++iter)
-    // {
-    //     delete *iter;// planes[i];
-    // }
-    // planes.clear();
+    for (auto iter = planes.begin(); iter != planes.end(); ++iter)
+    {
+        delete *iter;// planes[i];
+    }
+    planes.clear();
 }
 
 void H5DRM::clean_all_data()
@@ -587,7 +583,8 @@ void H5DRM::clean_all_data()
 
     hid_t obj_id_list[H5DRM_MAX_RETURN_OPEN_OBJS];
     hsize_t n_obj_open = 10;
-    while (id_drm_file > 0 and n_obj_open > 0)
+    //while (id_drm_file > 0 and n_obj_open > 0)
+    while (id_drm_file > 0 && n_obj_open > 0) //[20191013 huangjf]
     {
         int n_objects_closed = 0;
         n_obj_open = H5Fget_obj_count(id_drm_file, H5F_OBJ_DATASET | H5F_OBJ_GROUP | H5F_OBJ_ATTR | H5F_OBJ_LOCAL );
@@ -663,7 +660,8 @@ H5DRM::setDomain(Domain *theDomain)
 void
 H5DRM::applyLoad(double time)
 {
-    if (not is_initialized)
+    //if (not is_initialized)
+    if (!is_initialized)
     {
         intitialize();
     }
@@ -694,47 +692,54 @@ H5DRM::applyLoad(double time)
         FILE* fptr_accel = 0;
 
         static int step = 0;
-        char mshfilename[100];
 
-        // drmforces
-        sprintf(mshfilename, "drmforces.%d.msh", myrank);
-        fptr_forces = fopen(mshfilename, "a");
-        // drmdisplacements
-        sprintf(mshfilename, "drmdisplacements.%d.msh", myrank);
-        fptr_displ = fopen(mshfilename, "a");
-        // drmaccelerations
-        sprintf(mshfilename, "drmaccelerations.%d.msh", myrank);
-        fptr_accel = fopen(mshfilename, "a");
-        
-        fprintf(fptr_forces, "$NodeData\n");
-        fprintf(fptr_forces, "    1\n");
-        fprintf(fptr_forces, "\"DRM Forces\"\n");
-        fprintf(fptr_forces, "1\n");
-        fprintf(fptr_forces, "%f\n", time);
-        fprintf(fptr_forces, "3\n");
-        fprintf(fptr_forces, "%d\n", step);
-        fprintf(fptr_forces, "3\n");
-        fprintf(fptr_forces, "%d\n", Nodes.Size());
+	//jfhuang output current rank for parallel debug
+	opserr << "************************************************************"<< endln;
+	opserr << "H5DRM::applyLoad -- myrank = " << myrank << endln;
+	opserr << "************************************************************"<< endln;
 
-        fprintf(fptr_displ, "$NodeData\n");
-        fprintf(fptr_displ, "    1\n");
-        fprintf(fptr_displ, "\"DRM Displacements\"\n");
-        fprintf(fptr_displ, "1\n");
-        fprintf(fptr_displ, "%f\n", time);
-        fprintf(fptr_displ, "3\n");
-        fprintf(fptr_displ, "%d\n", step);
-        fprintf(fptr_displ, "3\n");
-        fprintf(fptr_displ, "%d\n", Nodes.Size());
+        //[20191018 huangjf] comment out
+        //char mshfilename[100];
 
-        fprintf(fptr_accel, "$NodeData\n");
-        fprintf(fptr_accel, "    1\n");
-        fprintf(fptr_accel, "\"DRM Acceleration\"\n");
-        fprintf(fptr_accel, "1\n");
-        fprintf(fptr_accel, "%f\n", time);
-        fprintf(fptr_accel, "3\n");
-        fprintf(fptr_accel, "%d\n", step);
-        fprintf(fptr_accel, "3\n");
-        fprintf(fptr_accel, "%d\n", Nodes.Size());
+        //// drmforces
+        //sprintf(mshfilename, "drmforces.%d.msh", myrank);
+        //fptr_forces = fopen(mshfilename, "a");
+        //// drmdisplacements
+        //sprintf(mshfilename, "drmdisplacements.%d.msh", myrank);
+        //fptr_displ = fopen(mshfilename, "a");
+        //// drmaccelerations
+        //sprintf(mshfilename, "drmaccelerations.%d.msh", myrank);
+        //fptr_accel = fopen(mshfilename, "a");
+        //
+        //fprintf(fptr_forces, "$NodeData\n");
+        //fprintf(fptr_forces, "    1\n");
+        //fprintf(fptr_forces, "\"DRM Forces\"\n");
+        //fprintf(fptr_forces, "1\n");
+        //fprintf(fptr_forces, "%f\n", time);
+        //fprintf(fptr_forces, "3\n");
+        //fprintf(fptr_forces, "%d\n", step);
+        //fprintf(fptr_forces, "3\n");
+        //fprintf(fptr_forces, "%d\n", Nodes.Size());
+
+        //fprintf(fptr_displ, "$NodeData\n");
+        //fprintf(fptr_displ, "    1\n");
+        //fprintf(fptr_displ, "\"DRM Displacements\"\n");
+        //fprintf(fptr_displ, "1\n");
+        //fprintf(fptr_displ, "%f\n", time);
+        //fprintf(fptr_displ, "3\n");
+        //fprintf(fptr_displ, "%d\n", step);
+        //fprintf(fptr_displ, "3\n");
+        //fprintf(fptr_displ, "%d\n", Nodes.Size());
+
+        //fprintf(fptr_accel, "$NodeData\n");
+        //fprintf(fptr_accel, "    1\n");
+        //fprintf(fptr_accel, "\"DRM Acceleration\"\n");
+        //fprintf(fptr_accel, "1\n");
+        //fprintf(fptr_accel, "%f\n", time);
+        //fprintf(fptr_accel, "3\n");
+        //fprintf(fptr_accel, "%d\n", step);
+        //fprintf(fptr_accel, "3\n");
+        //fprintf(fptr_accel, "%d\n", Nodes.Size());
 
 
         ++step;
@@ -760,19 +765,21 @@ H5DRM::applyLoad(double time)
                 load(2) = DRMForces(3 * local_pos + 2);
             }
 
-            fprintf(fptr_forces, "%d %f %f %f\n", nodeTag, load(0), load(1), load(2));
-            fprintf(fptr_displ, "%d %f %f %f\n", nodeTag, DRMDisplacements(3 * local_pos + 0), DRMDisplacements(3 * local_pos + 1), DRMDisplacements(3 * local_pos + 2));
-            fprintf(fptr_accel, "%d %f %f %f\n", nodeTag, DRMAccelerations(3 * local_pos + 0), DRMAccelerations(3 * local_pos + 1), DRMAccelerations(3 * local_pos + 2));
+            //[20191018 huangjf] comment out
+            //fprintf(fptr_forces, "%d %f %f %f\n", nodeTag, load(0), load(1), load(2));
+            //fprintf(fptr_displ, "%d %f %f %f\n", nodeTag, DRMDisplacements(3 * local_pos + 0), DRMDisplacements(3 * local_pos + 1), DRMDisplacements(3 * local_pos + 2));
+            //fprintf(fptr_accel, "%d %f %f %f\n", nodeTag, DRMAccelerations(3 * local_pos + 0), DRMAccelerations(3 * local_pos + 1), DRMAccelerations(3 * local_pos + 2));
 
             //Add to current nodal unbalanced load
             theNode->addUnbalancedLoad(load);
         }
-        fprintf(fptr_forces, "$EndNodeData\n");
-        fclose(fptr_forces);
-        fprintf(fptr_displ, "$EndNodeData\n");
-        fclose(fptr_displ);
-        fprintf(fptr_accel, "$EndNodeData\n");
-        fclose(fptr_accel);
+        //[20191018 huangjf] comment out
+        //fprintf(fptr_forces, "$EndNodeData\n");
+        //fclose(fptr_forces);
+        //fprintf(fptr_displ, "$EndNodeData\n");
+        //fclose(fptr_displ);
+        //fprintf(fptr_accel, "$EndNodeData\n");
+        //fclose(fptr_accel);
     }
 }
 
@@ -782,8 +789,13 @@ bool H5DRM::ComputeDRMMotions(double next_integration_time)
     bool have_displacement = id_displacement > 0;
     // bool have_velocity = id_velocity > 0;
     // bool have_acceleration = id_acceleration > 0;
+    //[20191017 huangjf]
+    bool have_acceleration = id_acceleration > 0;
 
-    if(have_displacement )//&& !have_acceleration)
+    //if(have_displacement )//&& !have_acceleration)
+    //    return drm_differentiate_displacements(next_integration_time);
+    //[20191017 huangjf]
+    if (have_displacement && !have_acceleration)
         return drm_differentiate_displacements(next_integration_time);
 
     //JAA Disable these modes for now
@@ -793,6 +805,9 @@ bool H5DRM::ComputeDRMMotions(double next_integration_time)
 
     // if(!have_displacement && !have_acceleration && have_velocity) 
     //     return drm_integrate_velocity(next_integration_time);
+    //[20191017 huangjf]
+     if(have_displacement && have_acceleration)
+         return drm_direct_read(next_integration_time);
 
     return false;
 }
@@ -895,10 +910,10 @@ bool H5DRM::drm_direct_read(double t)
         bool nanfound = false;
         for (int i = 0; i < 3; ++i)
         {
-	  if ( isnan(d1[i])  ||
-               isnan(a1[i])  ||
-               isnan(d2[i])  ||
-               isnan(a2[i]) )
+            if ( isnan(d1[i])  ||
+                 isnan(a1[i])  ||
+                 isnan(d2[i])  ||
+                 isnan(a2[i]) )
             {
                 nanfound = true;
             }
@@ -915,7 +930,7 @@ bool H5DRM::drm_direct_read(double t)
 
         if (errorflag1 < 0 || errorflag2 < 0 || errorflag3 < 0 || errorflag4 < 0 || nanfound)
         {
-            H5DRMerror << "H5DRM::drm_direct_read - Failed to read displacement or acceleration array!!\n" <<
+            H5DRMerror << "Failed to read displacement or acceleration array!!\n" <<
                        " n = " << n << endln <<
                        " nodeTag = " << nodeTag << endln <<
                        " station_id = " << station_id << endln <<
@@ -928,20 +943,15 @@ bool H5DRM::drm_direct_read(double t)
                        " mem_start  = [" << mem_start[0] << "]" << endln <<
                        " stride  = [" << stride[0] << ", " << stride[1] << "]" << endln <<
                        " count   = [" << count[0] << ", " << count[1] << "]" << endln <<
-                       " block   = [" << block[0] << ", " << block[1] << "]" << endln <<
-                       " errorflag1 = [" << errorflag1 << ", " << block[1] << "]" << endln <<
-                       " errorflag2 = [" << errorflag2 << ", " << block[1] << "]" << endln <<
-                       " errorflag3 = [" << errorflag3 << ", " << block[1] << "]" << endln <<
-                       " errorflag4 = [" << errorflag4 << ", " << block[1] << "]" << endln <<
-                       " nanfound   = [" << nanfound << ", " << block[1] << "]" << endln ;
-
+                       " block   = [" << block[0] << ", " << block[1] << "]" << endln;
             exit(-1);
         }
 
-        d1[2] = -d1[2];
-        d2[2] = -d2[2];
-        a1[2] = -a1[2];
-        a2[2] = -a2[2];
+        //[20191018 huangjf] comment out
+        //d1[2] = -d1[2];
+        //d2[2] = -d2[2];
+        //a1[2] = -a1[2];
+        //a2[2] = -a2[2];
 
         
         DRMDisplacements(3 * local_pos + 0) = d1[0]*(1-dtau) + d2[0]*(dtau);
@@ -981,34 +991,14 @@ bool H5DRM::drm_differentiate_displacements(double t)
     double dtau = (t - t1)/(t2-t1);
 
     id_displacement_dataspace = H5Dget_space(id_displacement);
-    hsize_t i_first = i1 - 1;
-    hsize_t i_last  = i1 + 2;
 
-    i_first = i_first < 0 ? 0 : i_first;
-    i_first = i_first > (hsize_t) number_of_timesteps-1 ? number_of_timesteps-1 : i_first;
-
-    i_last = i_last < 0 ? 0 : i_last;
-    i_last = i_last > (hsize_t) number_of_timesteps-1 ? number_of_timesteps-1 : i_last;
-
-    hsize_t i_len = (i_last - i_first) + 1; 
-    H5DRMout << "t = " << t 
-        << " dt = " << dt 
-        << " i1 = " << i1 
-        << " i2 = " << i2 
-        << " i_first = " << i_first
-        << " i_last = " << i_last
-        << " i_len = " << i_len
-        << " t1 = " << t1 
-        << " t2 = " << t2 
-        << " dtau = " << dtau << endln;
+    H5DRMout << "t = " << t << " dt = " << dt << " i1 = " << i1 << " i2 = " << i2 << " t1 = " << t1 << " t2 = " << t2 << " dtau = " << dtau << endln;
 
     double umax = -std::numeric_limits<double>::infinity();
     double amax = -std::numeric_limits<double>::infinity();
     double umin =  std::numeric_limits<double>::infinity();
     double amin =  std::numeric_limits<double>::infinity();
     double dt2 = dt*dt;
-
-
 
     for (int n = 0; n < Nodes.Size(); ++n)
     {
@@ -1024,12 +1014,21 @@ bool H5DRM::drm_differentiate_displacements(double t)
         d0[0][0] = d0[1][0] = d0[2][0] = 0.;
         d0[0][1] = d0[1][1] = d0[2][1] = 0.;
         d0[0][2] = d0[1][2] = d0[2][2] = 0.;
-        d0[0][3] = d0[1][3] = d0[2][3] = 0.;
         d1[0] = d1[1] = d1[2] = 0.;
         d2[0] = d2[1] = d2[2] = 0.;
         a1[0] = a1[1] = a1[2] = 0.;
         a2[0] = a2[1] = a2[2] = 0.;
 
+        hsize_t i_first = i1 - 1;
+        hsize_t i_last  = i1 + 2;
+
+        i_first = i_first < 0 ? 0 : i_first;
+        i_first = i_first > (hsize_t) number_of_timesteps-1 ? number_of_timesteps-1 : i_first;
+
+        i_last = i_last < 0 ? 0 : i_last;
+        i_last = i_last > (hsize_t) number_of_timesteps-1 ? number_of_timesteps-1 : i_last;
+
+        hsize_t i_len = (i_last - i_first) + 1; 
         hsize_t start[2]  = {(hsize_t) data_pos , (hsize_t) i_first};
         hsize_t stride[2] = {1                  , 1};
         hsize_t count[2]  = {3                  , i_len};
@@ -1056,13 +1055,9 @@ bool H5DRM::drm_differentiate_displacements(double t)
             H5S_SELECT_SET, mem_start, mem_stride, mem_count, mem_block );
 
         //Read data
-        herr_t errorflag1 = 0;
-        if (i1 > 2)
-        {
-            errorflag1 = H5Dread( id_displacement, H5T_NATIVE_DOUBLE, memspace,
+        herr_t errorflag1 = H5Dread( id_displacement, H5T_NATIVE_DOUBLE, memspace,
                                     id_displacement_dataspace, id_xfer_plist,  d0 );
-        }
-        
+       
 
         for (int dof = 0; dof < 3; ++dof)
         {
@@ -1078,17 +1073,10 @@ bool H5DRM::drm_differentiate_displacements(double t)
         bool nanfound = false;
         for (int i = 0; i < 3; ++i)
         {
-<<<<<<< HEAD
-	  if ( isnan(d1[i])  ||
-               isnan(a1[i])  ||
-               isnan(d2[i])  ||
-               isnan(a2[i]) )
-=======
             if ( isnan(d1[i])  ||
                  isnan(a1[i])  ||
                  isnan(d2[i])  ||
                  isnan(a2[i]) )
->>>>>>> 732044f5b1846fa0047e4516e0717dc0d22bffc3
             {
                 nanfound = true;
             }
@@ -1124,10 +1112,10 @@ bool H5DRM::drm_differentiate_displacements(double t)
             exit(-1);
         }
 
-        d1[2] = -d1[2];
-        d2[2] = -d2[2];
-        a1[2] = -a1[2];
-        a2[2] = -a2[2];
+        // d1[2] = -d1[2];
+        // d2[2] = -d2[2];
+        // a1[2] = -a1[2];
+        // a2[2] = -a2[2];
 
         
         DRMDisplacements(3 * local_pos + 0) = d1[0]*(1-dtau) + d2[0]*(dtau);
@@ -1202,7 +1190,14 @@ bool H5DRM::drm_integrate_velocity(double next_integration_time)
         int data_pos = station_id2data_pos[station_id];
         int local_pos = nodetag2local_pos[nodeTag];
 
-        double v[3][Nt];
+        //double v[3][Nt];
+        //[20191013 huangjf]
+        //double** v = new double* [3];
+        //for (int i = 0; i < 3; ++i)
+        //{
+        //    v[i] = new double[Nt];
+        //}
+        double *v = new double[3 * Nt];
 
         hsize_t start[2]  = {(hsize_t) data_pos , (hsize_t)i1};
         hsize_t stride[2] = {1                  , 1};
@@ -1253,93 +1248,20 @@ bool H5DRM::drm_integrate_velocity(double next_integration_time)
 
         for (hsize_t i = 0; i <  Nt; ++i)
         {
-            double v0 = v[0][i];
-            double v1 = v[1][i];
-            v[0][i] = v0;
-            v[1][i] = v1;
-            v[2][i] = -v[2][i];
+            //double v0 = v[0][i];
+            //double v1 = v[1][i];
+            //v[0][i] = v0;
+            //v[1][i] = v1;
+            //v[2][i] = -v[2][i];
+            //[20191013 huangjf]
+            double v0 = v[0 * Nt + i];
+            double v1 = v[1 * Nt + i];
+            v[0 * Nt + i] = v0;
+            v[1 * Nt + i] = v1;
+            v[2 * Nt + i] = -v[2 * Nt + i];
         }
 
 
-<<<<<<< HEAD
-		for (hsize_t i = 0; i < Nt; ++i)
-		{
-			double dtau = 0;
-			double tau_1 = tstart + i * dt;
-			double tau_2 = tstart + (i + 1) * dt;
-			tau_1 = tau_1 > t1 ? tau_1 : t1;
-			tau_2 = tau_2 < t2 ? tau_2 : t2;
-			dtau = tau_2 - tau_1;
-
-			if (dtau <= 0)
-				continue;
-
-
-
-			if (DEBUG_DRM_INTEGRATION)
-			{
-				/* FMK
-				fprintf(fptr, "i = %d dtau=%f tau_1=%f tau_2=%f dt=%f local_pos=%d dir=%d\n", (int) i, dtau, tau_1, tau_2, dt, local_pos, dir );
-				fprintf(fptr, "    DRMDisplacements(3 * local_pos + 0) = %f -->  v[0][i] = %f  v[0][i+1] = %f\n", DRMDisplacements(3 * local_pos + 0), v[0][i], v[0][i + 1] );
-				fprintf(fptr, "    DRMDisplacements(3 * local_pos + 1) = %f -->  v[1][i] = %f  v[1][i+1] = %f\n", DRMDisplacements(3 * local_pos + 1), v[1][i], v[1][i + 1] );
-				fprintf(fptr, "    DRMDisplacements(3 * local_pos + 2) = %f -->  v[2][i] = %f  v[2][i+1] = %f\n", DRMDisplacements(3 * local_pos + 2), v[2][i], v[2][i + 1] );
-				******/
-				fprintf(fptr, "i = %d dtau=%f tau_1=%f tau_2=%f dt=%f local_pos=%d dir=%d\n", (int)i, dtau, tau_1, tau_2, dt, local_pos, dir);
-				fprintf(fptr, "    DRMDisplacements(3 * local_pos + 0) = %f -->  v[0][i] = %f  v[0][i+1] = %f\n", DRMDisplacements(3 * local_pos + 0), v[0 + i * Nt], v[0 + (i + 1)*3]);
-				fprintf(fptr, "    DRMDisplacements(3 * local_pos + 1) = %f -->  v[1][i] = %f  v[1][i+1] = %f\n", DRMDisplacements(3 * local_pos + 1), v[1 + i * Nt], v[1 + (i + 1)*3]);
-				fprintf(fptr, "    DRMDisplacements(3 * local_pos + 2) = %f -->  v[2][i] = %f  v[2][i+1] = %f\n", DRMDisplacements(3 * local_pos + 2), v[2 + i * Nt], v[2 + (i + 1)*3]);
-
-			}
-
-			double u1 = DRMDisplacements(3 * local_pos + 0);
-			double u2 = DRMDisplacements(3 * local_pos + 1);
-			double u3 = DRMDisplacements(3 * local_pos + 2);
-			/* FMK
-			double du1 = (v[0][i] + v[0][i + 1]) * (dir * dtau / 2);
-			double du2 = (v[1][i] + v[1][i + 1]) * (dir * dtau / 2);
-			double du3 = (v[2][i] + v[2][i + 1]) * (dir * dtau / 2);
-			******/
-			double du1 = (v[0 + i * 3] + v[0 + (i + 1)*3]) * (dir * dtau / 2);
-			double du2 = (v[1 + i * 3] + v[1 + (i + 1)*3]) * (dir * dtau / 2);
-			double du3 = (v[2 + i * 3] + v[2 + (i + 1)*3]) * (dir * dtau / 2);
-
-			DRMDisplacements(3 * local_pos + 0) += du1;
-			DRMDisplacements(3 * local_pos + 1) += du2;
-			DRMDisplacements(3 * local_pos + 2) += du3;
-
-			if (DEBUG_DRM_INTEGRATION)
-			{
-				fprintf(fptr, "    DRMDisplacements(3 * local_pos + 0) = %f \n", DRMDisplacements(3 * local_pos + 0));
-				fprintf(fptr, "    DRMDisplacements(3 * local_pos + 1) = %f \n", DRMDisplacements(3 * local_pos + 1));
-				fprintf(fptr, "    DRMDisplacements(3 * local_pos + 2) = %f \n", DRMDisplacements(3 * local_pos + 2));
-			}
-
-			// bool found_nan = false;
-			if (isnan(u1) || isnan(du1) ||
-				isnan(u2) || isnan(du2) ||
-				isnan(u3) || isnan(du3) ||
-				isnan(dt) || isnan(dtau))
-			{
-				H5DRMerror << "NAN Detected!!! \n";
-				H5DRMerror << "    nodeTag = " << nodeTag << endln;
-				H5DRMerror << "    local_pos = " << local_pos << endln;
-				printf("    i = %d dtau=%f tau_1=%f tau_2=%f dt=%f local_pos=%d dir=%d\n", (int)i, dtau, tau_1, tau_2, dt, local_pos, dir);
-				printf("        u1 = %f du1 = %f \n", u1, du1);
-				printf("        u2 = %f du2 = %f \n", u2, du2);
-				printf("        u3 = %f du3 = %f \n", u3, du3);
-				/* FMK
-				printf("        DRMDisplacements(3 * local_pos + 0) = %f -->  v[0][i] = %f  v[0][i+1] = %f\n", DRMDisplacements(3 * local_pos + 0), v[0][i], v[0][i + 1] );
-				printf("        DRMDisplacements(3 * local_pos + 1) = %f -->  v[1][i] = %f  v[1][i+1] = %f\n", DRMDisplacements(3 * local_pos + 1), v[1][i], v[1][i + 1] );
-				printf("        DRMDisplacements(3 * local_pos + 2) = %f -->  v[2][i] = %f  v[2][i+1] = %f\n", DRMDisplacements(3 * local_pos + 2), v[2][i], v[2][i + 1] );
-				*/
-				printf("        DRMDisplacements(3 * local_pos + 0) = %f -->  v[0][i] = %f  v[0][i+1] = %f\n", DRMDisplacements(3 * local_pos + 0), v[0 + i * 3], v[0 + (i + 1)*3]);
-				printf("        DRMDisplacements(3 * local_pos + 1) = %f -->  v[1][i] = %f  v[1][i+1] = %f\n", DRMDisplacements(3 * local_pos + 1), v[1 + i * 3], v[1 + (i + 1)*3]);
-				printf("        DRMDisplacements(3 * local_pos + 2) = %f -->  v[2][i] = %f  v[2][i+1] = %f\n", DRMDisplacements(3 * local_pos + 2), v[2 + i * 3], v[2 + (i + 1)*3]);
-				exit(-1);
-			}
-
-		}
-=======
         for (hsize_t i = 0; i <  Nt; ++i)
         {
             double dtau = 0;
@@ -1357,17 +1279,26 @@ bool H5DRM::drm_integrate_velocity(double next_integration_time)
             if (DEBUG_DRM_INTEGRATION)
             {
                 fprintf(fptr, "i = %d dtau=%f tau_1=%f tau_2=%f dt=%f local_pos=%d dir=%d\n", (int) i, dtau, tau_1, tau_2, dt, local_pos, dir );
-                fprintf(fptr, "    DRMDisplacements(3 * local_pos + 0) = %f -->  v[0][i] = %f  v[0][i+1] = %f\n", DRMDisplacements(3 * local_pos + 0), v[0][i], v[0][i + 1] );
-                fprintf(fptr, "    DRMDisplacements(3 * local_pos + 1) = %f -->  v[1][i] = %f  v[1][i+1] = %f\n", DRMDisplacements(3 * local_pos + 1), v[1][i], v[1][i + 1] );
-                fprintf(fptr, "    DRMDisplacements(3 * local_pos + 2) = %f -->  v[2][i] = %f  v[2][i+1] = %f\n", DRMDisplacements(3 * local_pos + 2), v[2][i], v[2][i + 1] );
+                //fprintf(fptr, "    DRMDisplacements(3 * local_pos + 0) = %f -->  v[0][i] = %f  v[0][i+1] = %f\n", DRMDisplacements(3 * local_pos + 0), v[0][i], v[0][i + 1] );
+                //fprintf(fptr, "    DRMDisplacements(3 * local_pos + 1) = %f -->  v[1][i] = %f  v[1][i+1] = %f\n", DRMDisplacements(3 * local_pos + 1), v[1][i], v[1][i + 1] );
+                //fprintf(fptr, "    DRMDisplacements(3 * local_pos + 2) = %f -->  v[2][i] = %f  v[2][i+1] = %f\n", DRMDisplacements(3 * local_pos + 2), v[2][i], v[2][i + 1] );
+                //[20191013 huangjf]
+                fprintf(fptr, "    DRMDisplacements(3 * local_pos + 0) = %f -->  v[0][i] = %f  v[0][i+1] = %f\n", DRMDisplacements(3 * local_pos + 0), v[0 * Nt + i], v[0 * Nt + i + 1]);
+                fprintf(fptr, "    DRMDisplacements(3 * local_pos + 1) = %f -->  v[1][i] = %f  v[1][i+1] = %f\n", DRMDisplacements(3 * local_pos + 1), v[1 * Nt + i], v[1 * Nt + i + 1]);
+                fprintf(fptr, "    DRMDisplacements(3 * local_pos + 2) = %f -->  v[2][i] = %f  v[2][i+1] = %f\n", DRMDisplacements(3 * local_pos + 2), v[2 * Nt + i], v[2 * Nt + i + 1]);
             }
 
             double u1 = DRMDisplacements(3 * local_pos + 0);
             double u2 = DRMDisplacements(3 * local_pos + 1);
             double u3 = DRMDisplacements(3 * local_pos + 2);
-            double du1 = (v[0][i] + v[0][i + 1]) * (dir * dtau / 2);
-            double du2 = (v[1][i] + v[1][i + 1]) * (dir * dtau / 2);
-            double du3 = (v[2][i] + v[2][i + 1]) * (dir * dtau / 2);
+            //double du1 = (v[0][i] + v[0][i + 1]) * (dir * dtau / 2);
+            //double du2 = (v[1][i] + v[1][i + 1]) * (dir * dtau / 2);
+            //double du3 = (v[2][i] + v[2][i + 1]) * (dir * dtau / 2);
+            //[20191013 huangjf]
+            double du1 = (v[0 * Nt + i] + v[0 * Nt + i + 1]) * (dir * dtau / 2);
+            double du2 = (v[1 * Nt + i] + v[1 * Nt + i + 1]) * (dir * dtau / 2);
+            double du3 = (v[2 * Nt + i] + v[2 * Nt + i + 1]) * (dir * dtau / 2);
+
 
             DRMDisplacements(3 * local_pos + 0) += du1;
             DRMDisplacements(3 * local_pos + 1) += du2;
@@ -1393,33 +1324,52 @@ bool H5DRM::drm_integrate_velocity(double next_integration_time)
                 printf("        u1 = %f du1 = %f \n", u1, du1);
                 printf("        u2 = %f du2 = %f \n", u2, du2);
                 printf("        u3 = %f du3 = %f \n", u3, du3);
-                printf("        DRMDisplacements(3 * local_pos + 0) = %f -->  v[0][i] = %f  v[0][i+1] = %f\n", DRMDisplacements(3 * local_pos + 0), v[0][i], v[0][i + 1] );
-                printf("        DRMDisplacements(3 * local_pos + 1) = %f -->  v[1][i] = %f  v[1][i+1] = %f\n", DRMDisplacements(3 * local_pos + 1), v[1][i], v[1][i + 1] );
-                printf("        DRMDisplacements(3 * local_pos + 2) = %f -->  v[2][i] = %f  v[2][i+1] = %f\n", DRMDisplacements(3 * local_pos + 2), v[2][i], v[2][i + 1] );
+                //printf("        DRMDisplacements(3 * local_pos + 0) = %f -->  v[0][i] = %f  v[0][i+1] = %f\n", DRMDisplacements(3 * local_pos + 0), v[0][i], v[0][i + 1] );
+                //printf("        DRMDisplacements(3 * local_pos + 1) = %f -->  v[1][i] = %f  v[1][i+1] = %f\n", DRMDisplacements(3 * local_pos + 1), v[1][i], v[1][i + 1] );
+                //printf("        DRMDisplacements(3 * local_pos + 2) = %f -->  v[2][i] = %f  v[2][i+1] = %f\n", DRMDisplacements(3 * local_pos + 2), v[2][i], v[2][i + 1] );
+                //[20191013 huangjf]
+                printf("        DRMDisplacements(3 * local_pos + 0) = %f -->  v[0][i] = %f  v[0][i+1] = %f\n", DRMDisplacements(3 * local_pos + 0), v[0 * Nt + i], v[0 * Nt + i + 1]);
+                printf("        DRMDisplacements(3 * local_pos + 1) = %f -->  v[1][i] = %f  v[1][i+1] = %f\n", DRMDisplacements(3 * local_pos + 1), v[1 * Nt + i], v[1 * Nt + i + 1]);
+                printf("        DRMDisplacements(3 * local_pos + 2) = %f -->  v[2][i] = %f  v[2][i+1] = %f\n", DRMDisplacements(3 * local_pos + 2), v[2 * Nt + i], v[2 * Nt + i + 1]);
                 exit(-1);
             }
 
         }
->>>>>>> 732044f5b1846fa0047e4516e0717dc0d22bffc3
 
         int eval_i = (int) (t2 - t1) / dt;
 
 
-        DRMAccelerations(3 * local_pos + 0) = (v[0][eval_i] - v[0][eval_i + 1]) / dt;
-        DRMAccelerations(3 * local_pos + 1) = (v[1][eval_i] - v[1][eval_i + 1]) / dt;
-        DRMAccelerations(3 * local_pos + 2) = (v[2][eval_i] - v[2][eval_i + 1]) / dt;
+        //DRMAccelerations(3 * local_pos + 0) = (v[0][eval_i] - v[0][eval_i + 1]) / dt;
+        //DRMAccelerations(3 * local_pos + 1) = (v[1][eval_i] - v[1][eval_i + 1]) / dt;
+        //DRMAccelerations(3 * local_pos + 2) = (v[2][eval_i] - v[2][eval_i + 1]) / dt;
+        //[20191013 huangjf]
+        DRMAccelerations(3 * local_pos + 0) = (v[0 * Nt + eval_i] - v[0 * Nt + eval_i + 1]) / dt;
+        DRMAccelerations(3 * local_pos + 1) = (v[1 * Nt + eval_i] - v[1 * Nt + eval_i + 1]) / dt;
+        DRMAccelerations(3 * local_pos + 2) = (v[2 * Nt + eval_i] - v[2 * Nt + eval_i + 1]) / dt;
 
         if (DEBUG_DRM_INTEGRATION)
         {
             fprintf(fptr, "eval_i = %d \n", eval_i );
-            fprintf(fptr, "     v[0][eval_i] = %f  v[0][eval_i+1] = %f\n",  v[0][eval_i], v[0][eval_i + 1] );
-            fprintf(fptr, "     v[1][eval_i] = %f  v[1][eval_i+1] = %f\n",  v[1][eval_i], v[1][eval_i + 1] );
-            fprintf(fptr, "     v[2][eval_i] = %f  v[2][eval_i+1] = %f\n",  v[2][eval_i], v[2][eval_i + 1] );
+            //fprintf(fptr, "     v[0][eval_i] = %f  v[0][eval_i+1] = %f\n",  v[0][eval_i], v[0][eval_i + 1] );
+            //fprintf(fptr, "     v[1][eval_i] = %f  v[1][eval_i+1] = %f\n",  v[1][eval_i], v[1][eval_i + 1] );
+            //fprintf(fptr, "     v[2][eval_i] = %f  v[2][eval_i+1] = %f\n",  v[2][eval_i], v[2][eval_i + 1] );
+            //[20191013 huangjf]
+            fprintf(fptr, "     v[0][eval_i] = %f  v[0][eval_i+1] = %f\n", v[0 * Nt + eval_i], v[0 * Nt + eval_i + 1]);
+            fprintf(fptr, "     v[1][eval_i] = %f  v[1][eval_i+1] = %f\n", v[1 * Nt + eval_i], v[1 * Nt + eval_i + 1]);
+            fprintf(fptr, "     v[2][eval_i] = %f  v[2][eval_i+1] = %f\n", v[2 * Nt + eval_i], v[2 * Nt + eval_i + 1]);
             fprintf(fptr, "     DRMAccelerations(3 * local_pos + 0) = %f\n",  DRMAccelerations(3 * local_pos + 0) );
             fprintf(fptr, "     DRMAccelerations(3 * local_pos + 1) = %f\n",  DRMAccelerations(3 * local_pos + 1) );
             fprintf(fptr, "     DRMAccelerations(3 * local_pos + 2) = %f\n",  DRMAccelerations(3 * local_pos + 2) );
 
         }
+
+        //[20191013 huangjf] release memory
+        //for (int i = 0; i < 3; ++i)
+        //{
+        //    delete [] v[i];
+        //}
+        delete[] v;
+
     }
 
 
@@ -1450,10 +1400,9 @@ H5DRM::ComputeDRMLoads(double t)
 
     DRMForces.Zero();
     
-    if ( t < tstart || tend < t)
+    if (tstart > t || t > tend)
     {
-        // Will assume that DRM forces are null outside of the defined range...
-        return true;
+        return false;
     }
 
 
@@ -1468,8 +1417,6 @@ H5DRM::ComputeDRMLoads(double t)
 
         Element *theElement = theDomain->getElement( Elements[0] );
         int NIE = 8;
-        B_node.resize(NIEMAX);
-        E_node.resize(NIEMAX);
 
         for (int e = 0; e < Elements.Size(); e++)
         {
@@ -1482,8 +1429,9 @@ H5DRM::ComputeDRMLoads(double t)
             const ID &elementNodes = theElement->getExternalNodes();
 
             //Identify boundary and exterior nodes for this element
-            NIE = elementNodes.Size();
-            
+            B_node.resize(NIE);
+            E_node.resize(NIE);
+
             int nB = 0, nE = 0;
             for ( int ii = 0; ii < NIE; ii++)
             {
@@ -1502,7 +1450,8 @@ H5DRM::ComputeDRMLoads(double t)
                 }
             }
 
-            if ( nB != 0 and nE != 0 )
+            //if (nB != 0 and nE != 0)
+            if ( nB != 0 && nE != 0 ) //[20191013 huangjf]
             {
                 //Mass and stiffness matrices
                 Matrix Me = theElement->getMass();
@@ -1583,12 +1532,51 @@ H5DRM::ComputeDRMLoads(double t)
                     }
                 }
             }
+
+            ////[20191025 huangjf] output nodal displacement, acceleration and DRMForce of element 1001 for debugging
+            //if (eleTag == 1371)
+            //{
+            //    char debugfilename[100];
+            //    sprintf(debugfilename, "h5drmDebug.%d.txt", myrank);
+            //    FILE* fptr = fopen(debugfilename, "a+");
+
+            //    fprintf(fptr, "\n%f", t);
+            //    fprintf(fptr, "\n\tDRMDisp:");
+            //    for (int k = 0; k < NIE; ++k)
+            //    {
+            //        int nodeTag = elementNodes(k);
+            //        int local_pos = nodetag2local_pos[nodeTag];
+            //        fprintf(fptr, "  %.6f", DRMDisplacements[3 * local_pos]);
+            //        fprintf(fptr, "  %.6f", DRMDisplacements[3 * local_pos + 1]);
+            //        fprintf(fptr, "  %.6f", DRMDisplacements[3 * local_pos + 2]);
+            //    }
+
+            //    fprintf(fptr, "\n\tDRMAcce:");
+            //    for (int k = 0; k < NIE; ++k)
+            //    {
+            //        int nodeTag = elementNodes(k);
+            //        int local_pos = nodetag2local_pos[nodeTag];
+            //        fprintf(fptr, "  %.6f", DRMAccelerations[3 * local_pos]);
+            //        fprintf(fptr, "  %.6f", DRMAccelerations[3 * local_pos + 1]);
+            //        fprintf(fptr, "  %.6f", DRMAccelerations[3 * local_pos + 2]);
+            //    }
+
+            //    fprintf(fptr, "\n\tDRMForc:");
+            //    for (int k = 0; k < NIE; ++k)
+            //    {
+            //        int nodeTag = elementNodes(k);
+            //        int local_pos = nodetag2local_pos[nodeTag];
+            //        fprintf(fptr, "  %.6f", DRMForces[3 * local_pos]);
+            //        fprintf(fptr, "  %.6f", DRMForces[3 * local_pos + 1]);
+            //        fprintf(fptr, "  %.6f", DRMForces[3 * local_pos + 2]);
+            //    }
+
+            //    fclose(fptr);
+            //}
         }
     }
     if (myrank == 0)
         H5DRMout << "ComputeDRMLoads.... Done.\n";
-
-
 
     if (DEBUG_DRM_FORCES)
     {
@@ -1620,11 +1608,9 @@ H5DRM::sendSelf(int commitTag, Channel & theChannel)
 
     H5DRMout << "sending filename: " << HDF5filename << endl;
 
-    static Vector data(3);
+    static Vector data(2);
     data(0) = cFactor;
     data(1) = crd_scale;
-    data(2) = distance_tolerance;
-
     char drmfilename[H5DRM_MAX_FILENAME];
     strcpy(drmfilename, HDF5filename.c_str());
     Message filename_msg(drmfilename, H5DRM_MAX_FILENAME);
@@ -1650,7 +1636,7 @@ H5DRM::recvSelf(int commitTag, Channel & theChannel,
                 FEM_ObjectBroker & theBroker)
 {
     H5DRMout << "receiving...\n";
-    static Vector data(3);
+    static Vector data(2);
     char drmfilename[H5DRM_MAX_FILENAME];
     Message filename_msg(drmfilename, H5DRM_MAX_FILENAME);
 
@@ -1669,10 +1655,8 @@ H5DRM::recvSelf(int commitTag, Channel & theChannel,
     }
     cFactor = data(0);
     crd_scale = data(1);
-    distance_tolerance = data(2);
 
     HDF5filename = drmfilename;
-    H5DRMout << "received filename is " <<  drmfilename << "\n";
 
     return 0;
 }
@@ -1819,14 +1803,14 @@ void H5DRM::node_matching_BruteForce(double d_tol, const ID & internal, const Ma
         int ii_station_min = 0;
 
         if (DEBUG_NODE_MATCHING)
-            fprintf(fptrdrm, "%d %f %f %f\n", ++drmtag, node_xyz[0] + drmbox_x0[0], node_xyz[1] + drmbox_x0[1], node_xyz[2] + drmbox_x0[2]);
+            fprintf(fptrdrm, "%d %f %f %f\n", ++drmtag, node_xyz[0] /*+ drmbox_x0[0]*/, node_xyz[1] /*+ drmbox_x0[1]*/, node_xyz[2] /*+ drmbox_x0[2]*/);
         Vector station_xyz(3);
         for (int ii = 0; ii < xyz.noRows(); ++ii)
         {
             station_xyz(0) = xyz(ii, 0);
             station_xyz(1) = xyz(ii, 1);
             station_xyz(2) = xyz(ii, 2);
-            double d = (node_xyz + drmbox_x0 - station_xyz).Norm();
+            double d = (node_xyz /*+ drmbox_x0*/ - station_xyz).Norm();
             if (d < dmin)
             {
                 dmin = d;
@@ -1839,7 +1823,7 @@ void H5DRM::node_matching_BruteForce(double d_tol, const ID & internal, const Ma
             static Vector station_xyz(3);
             for (int dir = 0; dir < 3; ++dir)
                 station_xyz(dir) = xyz(station_id, dir);
-            double this_d_err = (station_xyz - node_xyz - drmbox_x0).Norm();
+            double this_d_err = (station_xyz - node_xyz /*- drmbox_x0*/).Norm();
             if (this_d_err > d_err)
                 d_err = this_d_err;
             nodetag2station_id.insert ( std::pair<int, int>(tag, station_id) );
@@ -1853,7 +1837,7 @@ void H5DRM::node_matching_BruteForce(double d_tol, const ID & internal, const Ma
         else
         {
             if (DEBUG_NODE_MATCHING)
-                fprintf(fptrdrm, "Node # %05d @ (%4.2f, %4.2f, %4.2f) rejected \n", tag, node_xyz(0) + drmbox_x0(0), node_xyz(1) + drmbox_x0(1), node_xyz(2) + drmbox_x0(2));
+                fprintf(fptrdrm, "Node # %05d @ (%4.2f, %4.2f, %4.2f) rejected \n", tag, node_xyz(0) /*+ drmbox_x0(0)*/, node_xyz(1) /*+ drmbox_x0(1)*/, node_xyz(2) /*+ drmbox_x0(2)*/);
         }
     }
     if (DEBUG_NODE_MATCHING)
@@ -1907,8 +1891,7 @@ bool read_int_dataset_into_id(const hid_t & h5drm_dataset, std::string dataset_n
     int ndims = H5Sget_simple_extent_ndims( id_dataspace);
     if (ndims != 1)
     {
-        opserr << "failure trying to open dataset: " << dataset_name.c_str() << endln;
-        opserr << "read_int_dataset_into_id - array dimension should be 1\n";
+        opserr << "read_double_dataset_into_vector - array dimension should be 1\n";
         Vector error(-1);
         return false;
     }
@@ -1919,7 +1902,8 @@ bool read_int_dataset_into_id(const hid_t & h5drm_dataset, std::string dataset_n
     hid_t id_memspace  = H5Screate_simple(1, &dim, 0);       // create dataspace of memory
     hid_t id_xfer_plist = H5Pcreate(H5P_DATASET_XFER);
 
-    int d[dim];
+    //int d[dim];
+    int *d = new int[dim];
 
     H5Dread( id_dataset, H5T_NATIVE_INT, id_memspace, id_dataspace, id_xfer_plist,  d);
     result.resize(dim);
@@ -1927,6 +1911,9 @@ bool read_int_dataset_into_id(const hid_t & h5drm_dataset, std::string dataset_n
     {
         result(i) = d[i];
     }
+
+    //[20191013 huangjf] release memory
+    delete[] d;
 
     H5Sclose(id_dataspace);
     H5Sclose(id_memspace);
@@ -1942,8 +1929,7 @@ bool read_double_dataset_into_vector(const hid_t & h5drm_dataset, std::string da
     int ndims = H5Sget_simple_extent_ndims( id_dataspace);
     if (ndims != 1)
     {
-        opserr << "failure trying to open dataset: " << dataset_name.c_str() << endln;
-        opserr << "read_double_dataset_into_vector - array dimension should be 1.\n";
+        opserr << "read_double_dataset_into_vector - array dimension should be 1\n";
         Vector error(-1);
         return false;
     }
@@ -1954,7 +1940,9 @@ bool read_double_dataset_into_vector(const hid_t & h5drm_dataset, std::string da
     hid_t id_memspace  = H5Screate_simple(1, &dim, 0);       // create dataspace of memory
     hid_t id_xfer_plist = H5Pcreate(H5P_DATASET_XFER);
 
-    double d[dim];
+    //double d[dim];
+    //[20191013 huangjf] 
+    double *d = new double[dim];
 
     H5Dread( id_dataset, H5T_NATIVE_DOUBLE, id_memspace, id_dataspace, id_xfer_plist,  d);
     result.resize(dim);
@@ -1962,6 +1950,9 @@ bool read_double_dataset_into_vector(const hid_t & h5drm_dataset, std::string da
     {
         result(i) = d[i];
     }
+
+    //[20191013 huangjf] release memory
+    delete[] d;
 
     H5Sclose(id_dataspace);
     H5Sclose(id_memspace);
@@ -1978,7 +1969,6 @@ bool read_scalar_double_dataset_into_double(const hid_t & h5drm_dataset, std::st
     int ndims = H5Sget_simple_extent_ndims( id_dataspace);
     if (ndims != 0)
     {
-        opserr << "failure trying to open dataset: " << dataset_name.c_str() << endln;
         opserr << "read_scalar_double_dataset_into_double - array dimension should be 0\n";
         Vector error(-1);
         return false;
@@ -2006,7 +1996,6 @@ bool read_double_dataset_into_matrix(const hid_t & h5drm_dataset, std::string da
     int ndims = H5Sget_simple_extent_ndims( id_dataspace);
     if (ndims != 2)
     {
-        opserr << "failure trying to open dataset: " << dataset_name.c_str() << endln;
         opserr << "read_double_dataset_into_matrix - array dimension should be 2\n";
         Vector error(-1);
         return false;
@@ -2018,7 +2007,14 @@ bool read_double_dataset_into_matrix(const hid_t & h5drm_dataset, std::string da
     hid_t id_memspace  = H5Screate_simple(2, dim, 0);       // create dataspace of memory
     hid_t id_xfer_plist = H5Pcreate(H5P_DATASET_XFER);
 
-    double d[dim[0]][dim[1]];
+    //double d[dim[0]][dim[1]];
+    //[20191013 huangjf]
+    //double** d = new double* [dim[0]];
+    //for (int i = 0; i < dim[0]; ++i)
+    //{
+    //    d[i] = new double[dim[1]];
+    //}
+    double* d = new double [dim[0] * dim[1]];
 
     H5Dread( id_dataset, H5T_NATIVE_DOUBLE, id_memspace, id_dataspace, id_xfer_plist,  d);
     result.resize(dim[0], dim[1]);
@@ -2026,9 +2022,18 @@ bool read_double_dataset_into_matrix(const hid_t & h5drm_dataset, std::string da
     {
         for (hsize_t j = 0; j < dim[1]; ++j)
         {
-            result(i, j) = d[i][j];
+            //result(i, j) = d[i][j];
+            //[20191013 huangjf]
+            result(i, j) = d[i* dim[1] + j];
         }
     }
+
+    //[20191013 huangjf]  release memory
+    //for (int i = 0; i < dim[0]; ++i)
+    //{
+    //    delete[] d[i];
+    //}
+    delete[] d;
 
     H5Sclose(id_dataspace);
     H5Sclose(id_memspace);
@@ -2045,8 +2050,7 @@ bool read_int_dataset_into_array(const hid_t & h5drm_dataset, std::string datase
     int ndims = H5Sget_simple_extent_ndims( id_dataspace);
     if (ndims != 2)
     {
-        opserr << "failure trying to open dataset: " << dataset_name.c_str() << endln;
-        opserr << "read_int_dataset_into_array - array dimension should be 2\n";
+        opserr << "read_double_dataset_into_matrix - array dimension should be 2\n";
         Vector error(-1);
         return false;
     }
@@ -2156,8 +2160,8 @@ bool Plane::get_ij_coordinates_to_point(double x1, double x2, int& i, int& j) co
     double xi1end = xi1(N1 - 1);
     double xi2start = xi2(0);
     double xi2end = xi2(N2 - 1);
-    i = (int) round( (x1 - xi1start) / (xi1end - xi1start) * (N1 - 1) );
-    j = (int) round( (x2 - xi2start) / (xi2end - xi2start) * (N2 - 1) );
+    i = (int) std::round( (x1 - xi1start) / (xi1end - xi1start) * (N1 - 1) );
+    j = (int) std::round( (x2 - xi2start) / (xi2end - xi2start) * (N2 - 1) );
 
     i = i < 0     ? 0    : i;
     i = i > N1 - 1  ? N1 - 1 : i;
@@ -2204,22 +2208,21 @@ void Plane::print(FILE * fptr) const
 
 void convert_h5drmcrd_to_ops_crd(Vector & v )
 {
-    // static Vector v_tmp(3);
-    // v_tmp = v;
-    // v(0) = v_tmp(1);
-    // v(1) = v_tmp(0);
-    // v(2) = -v_tmp(2);
+    static Vector v_tmp(3);
+    v_tmp = v;
+    v(0) = v_tmp(1);
+    v(1) = v_tmp(0);
+    v(2) = -v_tmp(2);
 }
-
 void convert_h5drmcrd_to_ops_crd(Matrix & xyz )
 {
-    // int nrows = xyz.noRows();
-    // Matrix tmp_xyz(xyz);
-    // for (int i = 0; i < nrows; ++i)
-    // {
-    //     xyz(i, 0) = tmp_xyz(i, 1);
-    //     xyz(i, 1) = tmp_xyz(i, 0);
-    //     xyz(i, 2) = -tmp_xyz(i, 2);
-    // }
+    int nrows = xyz.noRows();
+    Matrix tmp_xyz(xyz);
+    for (int i = 0; i < nrows; ++i)
+    {
+        xyz(i, 0) = tmp_xyz(i, 1);
+        xyz(i, 1) = tmp_xyz(i, 0);
+        xyz(i, 2) = -tmp_xyz(i, 2);
+    }
 }
 
