@@ -61,10 +61,10 @@
 
 using namespace std;
 
-#define DEBUG_NODE_MATCHING true
+#define DEBUG_NODE_MATCHING false
 #define DEBUG_DRM_INTEGRATION false
 #define DEBUG_DRM_FORCES false
-#define DEBUG_WITH_GMSH true
+#define DEBUG_WITH_GMSH false
 
 
 Vector H5DRM_calculate_cross_product(const Vector& a, const Vector& b);
@@ -304,19 +304,19 @@ H5DRM::H5DRM(
 	numH5DRMpatterns++;
 }
 
-std::string vector_to_string(Vector v)
-{
-	std::stringstream ss;
-	ss << "( ";
-	for (int i = 0; i < v.Size(); ++i)
-	{
-		ss << v[i] << " ";
-	}
-	ss << ")";
-	string s = ss.str();
-	// ss >> s;
-	return s;
-}
+// std::string vector_to_string(Vector v)
+// {
+// 	std::stringstream ss;
+// 	ss << "( ";
+// 	for (int i = 0; i < v.Size(); ++i)
+// 	{
+// 		ss << v[i] << " ";
+// 	}
+// 	ss << ")";
+// 	string s = ss.str();
+// 	// ss >> s;
+// 	return s;
+// }
 
 
 void H5DRM::intitialize()
@@ -366,16 +366,16 @@ void H5DRM::intitialize()
 	ID internal;
 	Matrix xyz;
 	Vector drmbox_x0;
-	read_double_dataset_into_vector(id_drm_file, "DRM_Metadata/drmbox_x0", drmbox_x0);
+	// read_double_dataset_into_vector(id_drm_file, "DRM_Metadata/drmbox_x0", drmbox_x0);
 	read_double_dataset_into_matrix(id_drm_file, "DRM_Data/xyz", xyz);
 	read_int_dataset_into_id(id_drm_file, "DRM_Data/internal", internal);
 	read_int_dataset_into_id(id_drm_file, "DRM_Data/data_location", station_id2data_pos);
-	read_scalar_double_dataset_into_double(id_drm_file, "DRM_Metadata/drmbox_xmax", drmbox_xmax);
-	read_scalar_double_dataset_into_double(id_drm_file, "DRM_Metadata/drmbox_xmin", drmbox_xmin);
-	read_scalar_double_dataset_into_double(id_drm_file, "DRM_Metadata/drmbox_ymax", drmbox_ymax);
-	read_scalar_double_dataset_into_double(id_drm_file, "DRM_Metadata/drmbox_ymin", drmbox_ymin);
-	read_scalar_double_dataset_into_double(id_drm_file, "DRM_Metadata/drmbox_zmax", drmbox_zmax);
-	read_scalar_double_dataset_into_double(id_drm_file, "DRM_Metadata/drmbox_zmin", drmbox_zmin);
+	// read_scalar_double_dataset_into_double(id_drm_file, "DRM_Metadata/drmbox_xmax", drmbox_xmax);
+	// read_scalar_double_dataset_into_double(id_drm_file, "DRM_Metadata/drmbox_xmin", drmbox_xmin);
+	// read_scalar_double_dataset_into_double(id_drm_file, "DRM_Metadata/drmbox_ymax", drmbox_ymax);
+	// read_scalar_double_dataset_into_double(id_drm_file, "DRM_Metadata/drmbox_ymin", drmbox_ymin);
+	// read_scalar_double_dataset_into_double(id_drm_file, "DRM_Metadata/drmbox_zmax", drmbox_zmax);
+	// read_scalar_double_dataset_into_double(id_drm_file, "DRM_Metadata/drmbox_zmin", drmbox_zmin);
 	read_scalar_double_dataset_into_double(id_drm_file, "DRM_Metadata/dt", dt);
 	read_scalar_double_dataset_into_double(id_drm_file, "DRM_Metadata/tstart", tstart);
 	read_scalar_double_dataset_into_double(id_drm_file, "DRM_Metadata/tend", tend);
@@ -388,74 +388,74 @@ void H5DRM::intitialize()
 
 	int NDRM_points = xyz.noRows();
 
-	std::string transformation_status("(not transformed)");
+	// std::string transformation_status("(not transformed)");
 
-	if (do_coordinate_transformation)
-	{
-		transformation_status = "(transformed)";
-		// convert_h5drmcrd_to_ops_crd(drmbox_x0);
-		// convert_h5drmcrd_to_ops_crd(xyz);
+	// if (do_coordinate_transformation)
+	// {
+	// 	transformation_status = "(transformed)";
+	// 	// convert_h5drmcrd_to_ops_crd(drmbox_x0);
+	// 	// convert_h5drmcrd_to_ops_crd(xyz);
 
 
-		if (myrank == 0)
-		{
-			H5DRMout << "Applying coordinate transformation  xyz (new) = T xyz (old) + x0  with" << endl;
-			H5DRMout << "T = " << "(" << T(0, 0) << " " << T(0, 1) << " " << T(0, 2) << ") (" << T(1, 0) << " " << T(1, 1) << " " << T(1, 2) << ") (" << T(2, 0) << " " << T(2, 1) << " " << T(2, 2) << ")" << endln;
-			H5DRMout << "x0 = " << vector_to_string(x0) << endln;
-			H5DRMout << "crd_scale = " << crd_scale << endln;
-			H5DRMout << "NDRM_points = " << NDRM_points << endln;
+	// 	if (myrank == 0)
+	// 	{
+	// 		H5DRMout << "Applying coordinate transformation  xyz (new) = T xyz (old) + x0  with" << endl;
+	// 		H5DRMout << "T = " << "(" << T(0, 0) << " " << T(0, 1) << " " << T(0, 2) << ") (" << T(1, 0) << " " << T(1, 1) << " " << T(1, 2) << ") (" << T(2, 0) << " " << T(2, 1) << " " << T(2, 2) << ")" << endln;
+	// 		H5DRMout << "x0 = " << vector_to_string(x0) << endln;
+	// 		H5DRMout << "crd_scale = " << crd_scale << endln;
+	// 		H5DRMout << "NDRM_points = " << NDRM_points << endln;
 
-			H5DRMout << "drmbox_x0 = " << vector_to_string(drmbox_x0) << " (before transformation)" << endln;
-		}
-		// utility for point transformation
-		auto lam_transform = [this, &drmbox_x0](Vector & point) {
-			static Vector copy(3);
-			copy = point;
-			copy -= drmbox_x0;
-			copy *= crd_scale;
-			point.addMatrixVector(0.0, T, copy, 1.0);
-			point += x0;
-		};
+	// 		H5DRMout << "drmbox_x0 = " << vector_to_string(drmbox_x0) << " (before transformation)" << endln;
+	// 	}
+	// 	// utility for point transformation
+	// 	auto lam_transform = [this, &drmbox_x0](Vector & point) {
+	// 		static Vector copy(3);
+	// 		copy = point;
+	// 		copy -= drmbox_x0;
+	// 		copy *= crd_scale;
+	// 		point.addMatrixVector(0.0, T, copy, 1.0);
+	// 		point += x0;
+	// 	};
 
-		// transform all points
-		for (int i = 0; i < NDRM_points; ++i)
-		{
-			static Vector row(3);
-			row(0) = xyz(i, 0);
-			row(1) = xyz(i, 1);
-			row(2) = xyz(i, 2);
-			lam_transform(row);
-			xyz(i, 0) = row(0);
-			xyz(i, 1) = row(1);
-			xyz(i, 2) = row(2);
-		}
+	// 	// transform all points
+	// 	for (int i = 0; i < NDRM_points; ++i)
+	// 	{
+	// 		static Vector row(3);
+	// 		row(0) = xyz(i, 0);
+	// 		row(1) = xyz(i, 1);
+	// 		row(2) = xyz(i, 2);
+	// 		lam_transform(row);
+	// 		xyz(i, 0) = row(0);
+	// 		xyz(i, 1) = row(1);
+	// 		xyz(i, 2) = row(2);
+	// 	}
 
-		// transform bounding box
-		static Vector pmax(3);
-		static Vector pmin(3);
-		pmax(0) = drmbox_xmax;
-		pmax(1) = drmbox_ymax;
-		pmax(2) = drmbox_zmax;
-		pmin(0) = drmbox_xmin;
-		pmin(1) = drmbox_ymin;
-		pmin(2) = drmbox_zmin;
-		lam_transform(pmax);
-		lam_transform(pmin);
-		drmbox_xmax = pmax(0);
-		drmbox_ymax = pmax(1);
-		drmbox_zmax = pmax(2);
-		drmbox_xmin = pmin(0);
-		drmbox_ymin = pmin(1);
-		drmbox_zmin = pmin(2);
+	// 	// transform bounding box
+	// 	static Vector pmax(3);
+	// 	static Vector pmin(3);
+	// 	pmax(0) = drmbox_xmax;
+	// 	pmax(1) = drmbox_ymax;
+	// 	pmax(2) = drmbox_zmax;
+	// 	pmin(0) = drmbox_xmin;
+	// 	pmin(1) = drmbox_ymin;
+	// 	pmin(2) = drmbox_zmin;
+	// 	lam_transform(pmax);
+	// 	lam_transform(pmin);
+	// 	drmbox_xmax = pmax(0);
+	// 	drmbox_ymax = pmax(1);
+	// 	drmbox_zmax = pmax(2);
+	// 	drmbox_xmin = pmin(0);
+	// 	drmbox_ymin = pmin(1);
+	// 	drmbox_zmin = pmin(2);
 
-		// transform drm x0, which is not the user-defined x0
-		drmbox_x0 = x0;
+	// 	// transform drm x0, which is not the user-defined x0
+	// 	drmbox_x0 = x0;
 
-		if (myrank == 0)
-		{
-			H5DRMout << "drmbox_x0 = " << vector_to_string(drmbox_x0) << " (after transformation)" << endln;
-		}
-	}
+	// 	if (myrank == 0)
+	// 	{
+	// 		H5DRMout << "drmbox_x0 = " << vector_to_string(drmbox_x0) << " (after transformation)" << endln;
+	// 	}
+	// }
 
 	double d_tol = distance_tolerance;
 	double d_err = 0;
@@ -467,16 +467,16 @@ void H5DRM::intitialize()
 	if (myrank == 0)
 	{
 		H5DRMout << "Dataset has " << NDRM_points << " data-points\n";
-		H5DRMout << "drmbox_x0   =  " << vector_to_string(drmbox_x0) << " " << transformation_status.c_str() << "\n";
-		H5DRMout << "drmbox_xmax =  " << drmbox_xmax << " " << transformation_status.c_str() << "\n";
-		H5DRMout << "drmbox_xmin =  " << drmbox_xmin << " " << transformation_status.c_str() << "\n";
-		H5DRMout << "drmbox_ymax =  " << drmbox_ymax << " " << transformation_status.c_str() << "\n";
-		H5DRMout << "drmbox_ymin =  " << drmbox_ymin << " " << transformation_status.c_str() << "\n";
-		H5DRMout << "drmbox_zmax =  " << drmbox_zmax << " " << transformation_status.c_str() << "\n";
-		H5DRMout << "drmbox_zmin =  " << drmbox_zmin << " " << transformation_status.c_str() << "\n";
-		H5DRMout << "DRM BBox X  =  " << drmbox_xmax - drmbox_xmin << " " << transformation_status.c_str() << "\n";
-		H5DRMout << "DRM BBox Y  =  " << drmbox_ymax - drmbox_ymin << " " << transformation_status.c_str() << "\n";
-		H5DRMout << "DRM BBox Z  =  " << drmbox_zmax - drmbox_zmin << " " << transformation_status.c_str() << "\n";
+		// H5DRMout << "drmbox_x0   =  " << vector_to_string(drmbox_x0) << " " << transformation_status.c_str() << "\n";
+		// H5DRMout << "drmbox_xmax =  " << drmbox_xmax << " " << transformation_status.c_str() << "\n";
+		// H5DRMout << "drmbox_xmin =  " << drmbox_xmin << " " << transformation_status.c_str() << "\n";
+		// H5DRMout << "drmbox_ymax =  " << drmbox_ymax << " " << transformation_status.c_str() << "\n";
+		// H5DRMout << "drmbox_ymin =  " << drmbox_ymin << " " << transformation_status.c_str() << "\n";
+		// H5DRMout << "drmbox_zmax =  " << drmbox_zmax << " " << transformation_status.c_str() << "\n";
+		// H5DRMout << "drmbox_zmin =  " << drmbox_zmin << " " << transformation_status.c_str() << "\n";
+		// H5DRMout << "DRM BBox X  =  " << drmbox_xmax - drmbox_xmin << " " << transformation_status.c_str() << "\n";
+		// H5DRMout << "DRM BBox Y  =  " << drmbox_ymax - drmbox_ymin << " " << transformation_status.c_str() << "\n";
+		// H5DRMout << "DRM BBox Z  =  " << drmbox_zmax - drmbox_zmin << " " << transformation_status.c_str() << "\n";
 	}
 
 	if (DEBUG_WITH_GMSH)
@@ -1159,10 +1159,10 @@ bool H5DRM::drm_direct_read(double t)
 			exit(-1);
 		}
 
-		d1[2] = -d1[2];
-		d2[2] = -d2[2];
-		a1[2] = -a1[2];
-		a2[2] = -a2[2];
+		// d1[2] = -d1[2];
+		// d2[2] = -d2[2];
+		// a1[2] = -a1[2];
+		// a2[2] = -a2[2];
 
 
 		DRMDisplacements(3 * local_pos + 0) = d1[0] * (1 - dtau) + d2[0] * (dtau);
@@ -1340,10 +1340,10 @@ bool H5DRM::drm_differentiate_displacements(double t)
 			exit(-1);
 		}
 
-		d1[2] = -d1[2];
-		d2[2] = -d2[2];
-		a1[2] = -a1[2];
-		a2[2] = -a2[2];
+		// d1[2] = -d1[2];
+		// d2[2] = -d2[2];
+		// a1[2] = -a1[2];
+		// a2[2] = -a2[2];
 
 
 		DRMDisplacements(3 * local_pos + 0) = d1[0] * (1 - dtau) + d2[0] * (dtau);
@@ -2020,9 +2020,9 @@ void H5DRM::node_matching_BruteForce(double d_tol, const ID & internal, const Ma
 	if (myrank == 0)
 	{
 		H5DRMout << "node_matching_BruteForce - Begin! d_tol = " << d_tol << "\n";
-		H5DRMout << "                                  drmbox_x0(0) = " << drmbox_x0(0) << "\n";
-		H5DRMout << "                                  drmbox_x0(1) = " << drmbox_x0(1) << "\n";
-		H5DRMout << "                                  drmbox_x0(2) = " << drmbox_x0(2) << "\n";
+		// H5DRMout << "                                  drmbox_x0(0) = " << drmbox_x0(0) << "\n";
+		// H5DRMout << "                                  drmbox_x0(1) = " << drmbox_x0(1) << "\n";
+		// H5DRMout << "                                  drmbox_x0(2) = " << drmbox_x0(2) << "\n";
 	}
 
 	char debugfilename[100];
