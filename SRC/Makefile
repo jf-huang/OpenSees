@@ -255,7 +255,9 @@ REMO_LIBS = $(FE)/element/nonlinearBeamColumn/matrixutil/MatrixUtil.o \
 	$(FE)/coordTransformation/CorotCrdTransfWarping3d.o
 	$(FE)/damping/Damping.o \
 	$(FE)/damping/SecStifDamping.o \
-	$(FE)/damping/UniformDamping.o
+	$(FE)/damping/UniformDamping.o \
+	$(FE)/damping/URDDamping.o \
+	$(FE)/damping/URDDampingbeta.o
 
 LAW_LIBS = $(FE)/system_of_eqn/linearSOE/sparseSYM/SymSparseLinSOE.o \
 	$(FE)/system_of_eqn/linearSOE/sparseSYM/SymSparseLinSolver.o \
