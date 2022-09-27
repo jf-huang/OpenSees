@@ -170,11 +170,11 @@ HDF5 version info
 */
 
 #define H5_VERS_MAJOR	1	/* For major interface/format changes  	     */
-#define H5_VERS_MINOR	12	/* For minor interface/format changes  	     */
-#define H5_VERS_RELEASE	0	/* For tweaks, bug-fixes, or development     */
+#define H5_VERS_MINOR	10	/* For minor interface/format changes  	     */
+#define H5_VERS_RELEASE	1	/* For tweaks, bug-fixes, or development     */
 #define H5_VERS_SUBRELEASE ""	/* For pre-releases like snap0       */
                               /* Empty string for real releases.           */
-#define H5_VERS_INFO    "HDF5 library version: 1.12.0"      /* Full version string */
+#define H5_VERS_INFO    "HDF5 library version: 1.10.1"      /* Full version string */
 
 /*
 cout wrapper for library loader verbosity
