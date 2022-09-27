@@ -252,7 +252,7 @@ REMO_LIBS = $(FE)/element/nonlinearBeamColumn/matrixutil/MatrixUtil.o \
 	$(FE)/coordTransformation/LinearCrdTransf3d.o \
 	$(FE)/coordTransformation/PDeltaCrdTransf3d.o \
 	$(FE)/coordTransformation/CorotCrdTransf3d.o \
-	$(FE)/coordTransformation/CorotCrdTransfWarping3d.o
+	$(FE)/coordTransformation/CorotCrdTransfWarping3d.o \
 	$(FE)/damping/Damping.o \
 	$(FE)/damping/SecStifDamping.o \
 	$(FE)/damping/UniformDamping.o \
