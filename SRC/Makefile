@@ -21,6 +21,7 @@ all:
 	@$(CD) $(FE)/utility; $(MAKE);
 	@$(CD) $(FE)/convergenceTest; $(MAKE)
 	@$(CD) $(FE)/recorder; $(MAKE);
+	@$(CD) $(FE)/damping; $(MAKE);
 	@$(CD) $(FE)/tcl; $(MAKE);
 	@$(CD) $(FE)/renderer; $(MAKE);
 	@$(CD) $(FE)/domain; $(MAKE);
@@ -81,6 +82,7 @@ all:
 	@$(CD) $(FE)/utility; $(MAKE);
 	@$(CD) $(FE)/convergenceTest; $(MAKE);
 	@$(CD) $(FE)/recorder; $(MAKE);
+	@$(CD) $(FE)/damping; $(MAKE);
 	@$(CD) $(FE)/tcl; $(MAKE);
 	@$(CD) $(FE)/renderer; $(MAKE);
 	@$(CD) $(FE)/domain; $(MAKE);
@@ -251,6 +253,9 @@ REMO_LIBS = $(FE)/element/nonlinearBeamColumn/matrixutil/MatrixUtil.o \
 	$(FE)/coordTransformation/PDeltaCrdTransf3d.o \
 	$(FE)/coordTransformation/CorotCrdTransf3d.o \
 	$(FE)/coordTransformation/CorotCrdTransfWarping3d.o
+	$(FE)/damping/Damping.o \
+	$(FE)/damping/SecStifDamping.o \
+	$(FE)/damping/UniformDamping.o
 
 LAW_LIBS = $(FE)/system_of_eqn/linearSOE/sparseSYM/SymSparseLinSOE.o \
 	$(FE)/system_of_eqn/linearSOE/sparseSYM/SymSparseLinSolver.o \
@@ -1488,6 +1493,7 @@ wipe: spotless
 	@$(CD) $(FE)/api; $(MAKE) wipe;
 	@$(CD) $(FE)/interpreter; $(MAKE) wipe;
 	@$(CD) $(FE)/damage; $(MAKE) wipe;
+	@$(CD) $(FE)/damping; $(MAKE) wipe;
 	@$(CD) $(FE)/string; $(MAKE) wipe;
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
