@@ -40,9 +40,9 @@ in STKO components are assumed all different!
 /* 
 loads hdf5 shared library at runtime. if uncommented, hdf5 will be linked statically.
 */
-#ifndef _HDF5
-#define MPCO_HDF5_LOADED_AT_RUNTIME
-#endif // !_HDF5 
+// #ifndef _HDF5
+// #define MPCO_HDF5_LOADED_AT_RUNTIME
+// #endif // !_HDF5 
 
 /* if hdf5 is loaded at runtime, this macro makes the process of loading hdf5 verbose */
 #define MPCO_LIBLOADER_VERBOSE
