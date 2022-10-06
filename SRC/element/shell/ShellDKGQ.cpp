@@ -2225,7 +2225,7 @@ int  ShellDKGQ::sendSelf (int commitTag, Channel &theChannel)
   // Now quad sends the ids of its materials
   int matDbTag;
   
-  static ID idData(13);
+  static ID idData(15);
   
   int i;
   for (i = 0; i < 4; i++) {
@@ -2246,6 +2246,20 @@ int  ShellDKGQ::sendSelf (int commitTag, Channel &theChannel)
   idData(10) = connectedExternalNodes(1);
   idData(11) = connectedExternalNodes(2);
   idData(12) = connectedExternalNodes(3);
+
+  idData(13) = 0;
+  idData(14) = 0;
+  if (theDamping) {
+    idData(13) = theDamping[0]->getClassTag();
+    int dbTag = theDamping[0]->getDbTag();
+    if (dbTag == 0) {
+      dbTag = theChannel.getDbTag();
+      if (dbTag != 0)
+        for (i = 0 ;  i < 4; i++)
+	        theDamping[i]->setDbTag(dbTag);
+	  }
+    idData(14) = dbTag;
+  }
 
   res += theChannel.sendID(dataTag, commitTag, idData);
   if (res < 0) {
@@ -2275,6 +2289,17 @@ int  ShellDKGQ::sendSelf (int commitTag, Channel &theChannel)
     }
   }
 
+  // Ask the Damping to send itself
+  if (theDamping) {
+    for (int i = 0 ;  i < 4; i++) {
+      res += theDamping[i]->sendSelf(commitTag, theChannel);
+      if (res < 0) {
+        opserr << "ShellDKGQ::sendSelf -- could not send Damping\n";
+        return res;
+      }
+    }
+  }
+
   return res;
 }
     
@@ -2286,7 +2311,7 @@ int  ShellDKGQ::recvSelf (int commitTag,
   
   int dataTag = this->getDbTag();
 
-  static ID idData(13);
+  static ID idData(15);
   // Quad now receives the tags of its four external nodes
   res += theChannel.recvID(dataTag, commitTag, idData);
   if (res < 0) {
@@ -2359,6 +2384,49 @@ int  ShellDKGQ::recvSelf (int commitTag,
     }
   }
   
+  int dmpTag = (int)idData(13);
+  if (dmpTag) {
+    for (i = 0 ;  i < 4; i++) {
+      // Check if the Damping is null; if so, get a new one
+      if (theDamping[i] == 0) {
+        theDamping[i] = theBroker.getNewDamping(dmpTag);
+        if (theDamping[i] == 0) {
+          opserr << "ShellDKGQ::recvSelf -- could not get a Damping\n";
+          exit(-1);
+        }
+      }
+  
+      // Check that the Damping is of the right type; if not, delete
+      // the current one and get a new one of the right type
+      if (theDamping[i]->getClassTag() != dmpTag) {
+        delete theDamping[i];
+        theDamping[i] = theBroker.getNewDamping(dmpTag);
+        if (theDamping[i] == 0) {
+          opserr << "ShellDKGQ::recvSelf -- could not get a Damping\n";
+          exit(-1);
+        }
+      }
+  
+      // Now, receive the Damping
+      theDamping[i]->setDbTag((int)idData(14));
+      res += theDamping[i]->recvSelf(commitTag, theChannel, theBroker);
+      if (res < 0) {
+        opserr << "ShellDKGQ::recvSelf -- could not receive Damping\n";
+        return res;
+      }
+    }
+  }
+  else {
+    for (i = 0; i < 4; i++)
+    {
+      if (theDamping[i])
+      {
+        delete theDamping[i];
+        theDamping[i] = 0;
+      }
+    }
+  }
+    
   return res;
 }
 //**************************************************************************
