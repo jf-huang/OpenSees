@@ -50,16 +50,17 @@
 #include <iomanip>
 using namespace std;
 
-extern StaticAnalysis *theStaticAnalysis;
+//extern StaticAnalysis *theStaticAnalysis;
 
 // constructor:
 URDDamping::URDDamping(int tag, int nfreq, Matrix *etaf, double tol, double t1, double t2, TimeSeries *f, int ptag, int iter):
 Damping(tag, DMP_TAG_URDDamping),
 nComp(0), nFilter(0),
-numfreq(nfreq), etaFreq(etaf), dptol(tol), ta(t1), td(t2), fac(f), prttag(ptag), maxiter(iter),
+numfreq(nfreq), dptol(tol), ta(t1), td(t2), fac(f), prttag(ptag), maxiter(iter),
 alpha(0), omegac(0), omegaetaf(0), qL(0), qLC(0), qd(0), qdC(0), q0(0), q0C(0),
 Freqlog(0), Fredif(0), Freqk(0), Freqb(0)
 {
+  etaFreq = new Matrix(*etaf);
   Initialize();
 }
 
@@ -68,10 +69,11 @@ Freqlog(0), Fredif(0), Freqk(0), Freqb(0)
 URDDamping::URDDamping(int tag, int nfreq, Matrix* etaf, double tol, double t1, double t2, TimeSeries *f, int nF, Vector *a, Vector *w, Vector *ef, int ptag, int iter):
 Damping(tag, DMP_TAG_URDDamping),
 nComp(0), nFilter(0),
-numfreq(nfreq), etaFreq(etaf), dptol(tol), ta(t1), td(t2), fac(f), prttag(ptag), maxiter(iter),
+numfreq(nfreq), dptol(tol), ta(t1), td(t2), fac(f), prttag(ptag), maxiter(iter),
 alpha(0), omegac(0), omegaetaf(0), qL(0), qLC(0), qd(0), qdC(0), q0(0), q0C(0),
 Freqlog(0), Fredif(0), Freqk(0), Freqb(0)
 {
+  etaFreq = new Matrix(*etaf);
   if (nF > 0 && a->Size() == nF && w->Size() == nF && ef->Size() == nF)
   {
     nFilter = nF;
@@ -551,7 +553,8 @@ URDDamping::update(Vector q)
 {
   double t = theDomain->getCurrentTime();
   double dT = theDomain->getDT();
-  if (theStaticAnalysis)
+  StaticAnalysis **theStaticAnalysis = OPS_GetStaticAnalysis();
+  if (*theStaticAnalysis)
   {
     *q0 = q;
     (*qd).Zero();
@@ -604,7 +607,8 @@ double URDDamping::getStiffnessMultiplier(void)
   double t = theDomain->getCurrentTime();
   double dT = theDomain->getDT();
   double km = 0.0;
-  if (dT > 0.0 && t > ta && t < td)
+  StaticAnalysis **theStaticAnalysis = OPS_GetStaticAnalysis();
+  if (!*theStaticAnalysis && dT > 0.0 && t > ta && t < td)
   {
     for (int i = 0; i < nFilter; ++i)
     {
