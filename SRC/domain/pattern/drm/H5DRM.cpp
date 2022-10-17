@@ -64,7 +64,7 @@ using namespace std;
 #define DEBUG_NODE_MATCHING false
 #define DEBUG_DRM_INTEGRATION false
 #define DEBUG_DRM_FORCES false
-#define DEBUG_WITH_GMSH true
+#define DEBUG_WITH_GMSH false
 
 
 Vector H5DRM_calculate_cross_product(const Vector& a, const Vector& b);
