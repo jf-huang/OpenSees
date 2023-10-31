@@ -43,6 +43,8 @@ UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 #include "OpenSeesCommands.h"
 #include <OPS_Globals.h>
 
+#define OPS_PYVERSION "3.4.0.4"
+
 static PythonWrapper* wrapper = 0;
 
 PythonWrapper::PythonWrapper()
@@ -975,6 +977,18 @@ static PyObject *Py_ops_printB(PyObject *self, PyObject *args)
     return wrapper->getResults();
 }
 
+static PyObject *Py_ops_printX(PyObject *self, PyObject *args)
+{
+    wrapper->resetCommandLine(PyTuple_Size(args), 1, args);
+
+    if (OPS_printX() < 0) {
+	opserr<<(void*)0;
+	return NULL;
+    }
+
+    return wrapper->getResults();
+}
+
 static PyObject *Py_ops_printGID(PyObject *self, PyObject *args)
 {
     wrapper->resetCommandLine(PyTuple_Size(args), 1, args);
@@ -1196,6 +1210,18 @@ static PyObject *Py_ops_setNodeCoord(PyObject *self, PyObject *args)
     wrapper->resetCommandLine(PyTuple_Size(args), 1, args);
 
     if (OPS_setNodeCoord() < 0) {
+	opserr<<(void*)0;
+	return NULL;
+    }
+
+    return wrapper->getResults();
+}
+
+static PyObject *Py_ops_getPatterns(PyObject *self, PyObject *args)
+{
+    wrapper->resetCommandLine(PyTuple_Size(args), 1, args);
+
+    if (OPS_getPatterns() < 0) {
 	opserr<<(void*)0;
 	return NULL;
     }
@@ -1869,6 +1895,18 @@ static PyObject *Py_ops_version(PyObject *self, PyObject *args)
     wrapper->resetCommandLine(PyTuple_Size(args), 1, args);
 
     if (OPS_version() < 0) {
+	opserr<<(void*)0;
+	return NULL;
+    }
+
+    return wrapper->getResults();
+}
+
+static PyObject *Py_ops_pyversion(PyObject *self, PyObject *args)
+{
+    wrapper->resetCommandLine(PyTuple_Size(args), 1, args);
+
+    if (OPS_SetString(OPS_PYVERSION) < 0) {
 	opserr<<(void*)0;
 	return NULL;
     }
@@ -2892,6 +2930,7 @@ PythonWrapper::addOpenSeesCommands()
     addCommand("printModel", &Py_ops_print);
     addCommand("printA", &Py_ops_printA);
     addCommand("printB", &Py_ops_printB);
+    addCommand("printX", &Py_ops_printX);
     addCommand("printGID", &Py_ops_printGID);
     addCommand("testNorm", &Py_ops_getCTestNorms);
     addCommand("testNorms", &Py_ops_getCTestNorms);
@@ -2912,6 +2951,7 @@ PythonWrapper::addOpenSeesCommands()
     addCommand("nodeResponse", &Py_ops_nodeResponse);
     addCommand("nodeCoord", &Py_ops_nodeCoord);
     addCommand("setNodeCoord", &Py_ops_setNodeCoord);
+    addCommand("getPatterns", &Py_ops_getPatterns);    
     addCommand("getFixedNodes", &Py_ops_getFixedNodes);
     addCommand("getFixedDOFs", &Py_ops_getFixedDOFs);
     addCommand("getConstrainedNodes", &Py_ops_getConstrainedNodes);
@@ -2968,6 +3008,7 @@ PythonWrapper::addOpenSeesCommands()
     addCommand("numIter", &Py_ops_numIter);
     addCommand("systemSize", &Py_ops_systemSize);
     addCommand("version", &Py_ops_version);
+    addCommand("pyversion", &Py_ops_pyversion);
     addCommand("setMaxOpenFiles", &Py_ops_setMaxOpenFiles);
     addCommand("limitCurve", &Py_ops_limitCurve);
     addCommand("imposedMotion", &Py_ops_imposedMotion);

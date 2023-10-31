@@ -1406,6 +1406,9 @@ extern int OPS_TetMesh();
 extern int OPS_QuadMesh();
 extern int OPS_BgMesh();
 extern int OPS_ParticleGroup();
+extern int OPS_Flume();
+extern int OPS_BeamBrick();
+extern int OPS_BeamDisk();
 extern BackgroundMesh& OPS_getBgMesh();
 
 
@@ -1433,6 +1436,12 @@ int OPS_mesh()
 	res = OPS_TetMesh();
     } else if (strcmp(type, "quad") == 0) {
 	res = OPS_QuadMesh();
+    } else if (strcmp(type, "flume") == 0) {
+	res = OPS_Flume();
+    } else if (strcmp(type, "beamBrick") == 0) {
+	res = OPS_BeamBrick();
+    } else if (strcmp(type, "beamDisk") == 0) {
+	res = OPS_BeamDisk();
     } else {
         opserr<<"WARNING: mesh type "<<type<<" is unknown\n";
         return -1;
@@ -1569,57 +1578,26 @@ int OPS_send()
         return -1;
     }
 
-    std::vector<int> idata(num);
     std::vector<double> ddata(num);
-    sdata = OPS_GetString();
-    MPI_Datatype datatype = MPI_CHAR;
-    if (strcmp(sdata,"Invalid String Input!") == 0) {
+    MPI_Datatype datatype = MPI_DOUBLE;
+    if (OPS_GetDoubleInput(&num, &ddata[0]) < 0) {
+        if (num > 1) {
+            opserr << "WARNING: data is string and size must be 1\n";
+            return -1;
+        }
+        datatype = MPI_CHAR;
         OPS_ResetCurrentInputArg(-1);
-        datatype = MPI_DOUBLE;
-        int numdata = 1;
-        if (OPS_GetDoubleInput(&numdata, &ddata[0]) < 0) {
-            OPS_ResetCurrentInputArg(-1);
-            datatype = MPI_INT;
-            if (OPS_GetIntInput(&numdata, &idata[0]) < 0) {
-                opserr << "WARNING: failed to detect data type\n";
-                return -1;
-            }
-        }
+        sdata = OPS_GetString();
     }
 
-    // get all data
-    if (num > 1 && datatype != MPI_CHAR) {
-        int numdata = num - 1;
-        if (datatype == MPI_DOUBLE) {
-            if (OPS_GetDoubleInput(&numdata, &ddata[1]) < 0) {
-                opserr << "WARNING: not all data is double\n";
-                return -1;
-            }
-        } else {
-            if (OPS_GetIntInput(&numdata, &idata[1]) < 0) {
-                opserr << "WARNING: not all data is int\n";
-                return -1;
-            }
-        }
-    }
-
-    // data length, 0-int, 1-double, 2-string
+    // data length, 1-double, 2-string
     int msgLength[2] = {0,0};
     void* buffer = 0;
-    if (datatype == MPI_INT) {
-
-        msgLength[0] = num;
-        msgLength[1] = 0;
-        buffer = (void *) &idata[0];
-
-    } else if (datatype == MPI_DOUBLE) {
-
+    if (datatype == MPI_DOUBLE) {
         msgLength[0] = num;
         msgLength[1] = 1;
         buffer = (void *) &ddata[0];
-
     } else {
-
         msgLength[0] = strlen(sdata)+1;
         msgLength[1] = 2;
         buffer = (void *) sdata;
@@ -1670,7 +1648,8 @@ int OPS_recv()
 
             sdata = OPS_GetString();
             if (strcmp(sdata, "ANY") == 0) {
-                otherPID = -2;
+                opserr << "WARNING: ANY pid is no longer available\n";
+                return -1;
             } else {
                 opserr << "WARNING: Invalid pid\n";
                 return -1;
@@ -1684,57 +1663,34 @@ int OPS_recv()
     // receive data
     MPI_Status status;
 
-	// receive length and type
-	int msgLength[2] = {0,0};
-	if (otherPID == -2) {
-        MPI_Recv((void *) (&msgLength[0]), 2, MPI_INT, MPI_ANY_SOURCE,
-                 0, MPI_COMM_WORLD, &status);
-    } else {
-        MPI_Recv((void *) (&msgLength[0]), 2, MPI_INT, otherPID,
-                 0, MPI_COMM_WORLD, &status);
-    }
+    // receive length and type
+    int msgLength[2] = {0, 0};
+    MPI_Recv((void *)(&msgLength[0]), 2, MPI_INT, otherPID, 0,
+             MPI_COMM_WORLD, &status);
 
-	// get data
+    // get data
     if (msgLength[0] > 0) {
 
         // get type
-        MPI_Datatype datatype = MPI_INT;
+        MPI_Datatype datatype = MPI_DOUBLE;
         char* gMsg = new char[msgLength[0]];
-        std::vector<int> idata(msgLength[0]);
         std::vector<double> ddata(msgLength[0]);
         void* buffer = 0;
-        if (msgLength[1] == 0) {
-
-            datatype = MPI_INT;
-            buffer = (void *) &idata[0];
-
-        } else if (msgLength[1] == 1) {
-
+        if (msgLength[1] == 1) {
             datatype = MPI_DOUBLE;
             buffer = (void *) &ddata[0];
-
         } else {
-
             datatype = MPI_CHAR;
             buffer = (void *) gMsg;
         }
 
         // receive data
-        if (otherPID == -2) {
-            MPI_Recv(buffer, msgLength[0], datatype, MPI_ANY_SOURCE,
-                     1, MPI_COMM_WORLD, &status);
-        } else {
-            MPI_Recv(buffer, msgLength[0], datatype, otherPID,
-                     1, MPI_COMM_WORLD, &status);
-        }
+        MPI_Recv(buffer, msgLength[0], datatype, otherPID, 1,
+                 MPI_COMM_WORLD, &status);
 
-	    // set outputs
-	    int res = 0;
-	    if (datatype == MPI_INT) {
-
-            res = OPS_SetIntOutput(&msgLength[0], &idata[0], false);
-
-	    } else if (datatype == MPI_DOUBLE) {
+        // set outputs
+        int res = 0;
+        if (datatype == MPI_DOUBLE) {
 
             res = OPS_SetDoubleOutput(&msgLength[0], &ddata[0], false);
 
@@ -1778,48 +1734,22 @@ int OPS_Bcast() {
             return -1;
         }
 
-        std::vector<int> idata(num);
         std::vector<double> ddata(num);
-        const char* sdata = OPS_GetString();
-        datatype = MPI_CHAR;
-        if (strcmp(sdata,"Invalid String Input!") == 0) {
+        datatype = MPI_DOUBLE;
+        const char* sdata = 0;
+        if (OPS_GetDoubleInput(&num, &ddata[0]) < 0) {
+            if (num > 1) {
+                opserr
+                    << "WARNING: data is string and size must be 1\n";
+                return -1;
+            }
+            datatype = MPI_CHAR;
             OPS_ResetCurrentInputArg(-1);
-            datatype = MPI_DOUBLE;
-            int numdata = 1;
-            if (OPS_GetDoubleInput(&numdata, &ddata[0]) < 0) {
-                OPS_ResetCurrentInputArg(-1);
-                datatype = MPI_INT;
-                if (OPS_GetIntInput(&numdata, &idata[0]) < 0) {
-                    opserr << "WARNING: failed to detect data type\n";
-                    return -1;
-                }
-            }
+            sdata = OPS_GetString();
         }
 
-        // get all data
-        if (num > 1 && datatype != MPI_CHAR) {
-            int numdata = num - 1;
-            if (datatype == MPI_DOUBLE) {
-                if (OPS_GetDoubleInput(&numdata, &ddata[1]) < 0) {
-                    opserr << "WARNING: not all data is double\n";
-                    return -1;
-                }
-            } else {
-                if (OPS_GetIntInput(&numdata, &idata[1]) < 0) {
-                    opserr << "WARNING: not all data is int\n";
-                    return -1;
-                }
-            }
-        }
-
-        // data length, 0-int, 1-double, 2-string
-        if (datatype == MPI_INT) {
-
-            msgLength[0] = num;
-            msgLength[1] = 0;
-            buffer = (void *) &idata[0];
-
-        } else if (datatype == MPI_DOUBLE) {
+        // data length, 1-double, 2-string
+        if (datatype == MPI_DOUBLE) {
 
             msgLength[0] = num;
             msgLength[1] = 1;
@@ -1841,16 +1771,10 @@ int OPS_Bcast() {
         if (msgLength[0] > 0) {
 
             // get type
-            datatype = MPI_INT;
+            datatype = MPI_DOUBLE;
             char* gMsg = new char[msgLength[0]];
-            std::vector<int> idata(msgLength[0]);
             std::vector<double> ddata(msgLength[0]);
-            if (msgLength[1] == 0) {
-
-                datatype = MPI_INT;
-                buffer = (void *) &idata[0];
-
-            } else if (msgLength[1] == 1) {
+            if (msgLength[1] == 1) {
 
                 datatype = MPI_DOUBLE;
                 buffer = (void *) &ddata[0];
@@ -1864,11 +1788,7 @@ int OPS_Bcast() {
 
             // set outputs
             int res = 0;
-            if (datatype == MPI_INT) {
-
-                res = OPS_SetIntOutput(&msgLength[0], &idata[0], false);
-
-            } else if (datatype == MPI_DOUBLE) {
+            if (datatype == MPI_DOUBLE) {
 
                 res = OPS_SetDoubleOutput(&msgLength[0], &ddata[0], false);
 
@@ -1885,155 +1805,6 @@ int OPS_Bcast() {
         }
     }
 #endif
-    return 0;
-}
-
-int OPS_sdfResponse()
-{
-    int numdata = OPS_GetNumRemainingInputArgs();
-    if (numdata < 8) {
-	opserr << "Insufficient arguments to sdfResponse --";
-	opserr << "m, zeta, k, Fy, alpha, dtF, filename, dt, <uresidual, umaxprev>\n";
-	return -1;
-    }
-
-    double data[9] = {0,0,0,0,0,0,0,0,0};
-    numdata = 6;
-    if (OPS_GetDoubleInput(&numdata, &data[0]) < 0) {
-	opserr << "WARNING sdfResponse -- could not read input \n";
-	return -1;
-    }
-
-    const char* filename = OPS_GetString();
-
-    numdata = OPS_GetNumRemainingInputArgs();
-    if (numdata > 3) numdata = 3;
-    if (OPS_GetDoubleInput(&numdata, &data[6]) < 0) {
-	opserr << "WARNING sdfResponse -- could not read input \n";
-	return -1;
-    }
-
-    double m = data[0];
-    double zeta = data[1];
-    double k = data[2];
-    double Fy = data[3];
-    double alpha = data[4];
-    double dtF = data[5];
-    double dt = data[6];
-    double uresidual = data[7];
-    double umaxprev = data[8];
-    
-    double gamma = 0.5;
-    double beta = 0.25;
-    double tol = 1.0e-8;
-    int maxIter = 10;
-
-    std::ifstream infile(filename);
- 
-    double c = zeta*2*sqrt(k*m);
-    double Hkin = alpha/(1.0-alpha)*k;
-
-    double p0 = 0.0;
-    double u0 = uresidual;
-    double v0 = 0.0;
-    double fs0 = 0.0;
-    double a0 = (p0-c*v0-fs0)/m;
-
-    double a1 = m/(beta*dt*dt) + (gamma/(beta*dt))*c;
-    double a2 = m/(beta*dt) + (gamma/beta-1.0)*c;
-    double a3 = (0.5/beta-1.0)*m + dt*(0.5*gamma/beta-1.0)*c;
-
-    double au = 1.0/(beta*dt*dt);
-    double av = 1.0/(beta*dt);
-    double aa = 0.5/beta-1.0;
-
-    double vu = gamma/(beta*dt);
-    double vv = 1.0-gamma/beta;
-    double va = dt*(1-0.5*gamma/beta);
-    
-    double kT0 = k;
-
-    double umax = fabs(umaxprev);
-    double amax = 0.0; double tamax = 0.0;
-    double up = uresidual; double up0 = up;
-    int i = 0;
-    double ft, u=0, du, v, a, fs, zs, ftrial, kT, kTeff, dg, phat, R, R0, accel;
-    while (infile >> ft) {
-	i++;
-    
-	u = u0;
-      
-	fs = fs0;
-	kT = kT0;
-	up = up0;
-      
-	phat = ft + a1*u0 + a2*v0 + a3*a0;
-      
-	R = phat - fs - a1*u;
-	R0 = R;
-	if (R0 == 0.0) {
-	    R0 = 1.0;
-	}
-    
-	int iter = 0;
-
-	while (iter < maxIter && fabs(R/R0) > tol) {
-	    iter++;
-
-	    kTeff = kT + a1;
-
-	    du = R/kTeff;
-
-	    u = u + du;
-
-	    fs = k*(u-up0);
-	    zs = fs-Hkin*up0;
-	    ftrial = fabs(zs)-Fy;
-	    if (ftrial > 0) {
-		dg = ftrial/(k+Hkin);
-		if (fs < 0) {
-		    fs = fs + dg*k;
-		    up = up0 - dg;
-		} else {
-		    fs = fs - dg*k;
-		    up = up0 + dg;
-		}
-		kT = k*Hkin/(k+Hkin);
-	    } else {
-		kT = k;
-	    }
-      
-	    R = phat - fs - a1*u;
-	}
-
-	v = vu*(u-u0) + vv*v0 + va*a0;
-	a = au*(u-u0) - av*v0 - aa*a0;
-
-	u0 = u;
-	v0 = v;
-	a0 = a;
-	fs0 = fs;
-	kT0 = kT;
-	up0 = up;
-
-	if (fabs(u) > umax) {
-	    umax = fabs(u);
-	}
-	if (fabs(a) > amax) {
-	    amax = fabs(a);
-	    tamax = iter*dt;
-	}
-    }
-  
-    infile.close();
-
-    double output[] = {umax, u, up, amax, tamax};
-    numdata = 5;
-    if (OPS_SetDoubleOutput(&numdata,output, false) < 0) {
-	opserr << "WARNING: failed to set output -- sdfResponse\n";
-	return -1;
-    }
-  
     return 0;
 }
 
