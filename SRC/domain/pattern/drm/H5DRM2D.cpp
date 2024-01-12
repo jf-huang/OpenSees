@@ -36,7 +36,7 @@
 #include <math.h>
 #include <time.h>
 #include <hdf5.h>
-#include <H5DRM.h>
+#include <H5DRM2D.h>
 
 #include <Channel.h>
 #include <elementAPI.h>
@@ -60,7 +60,7 @@
 #include <ElementIter.h>
 
 
-#define numNodeDOF 3  // Only nodes with 3-dofs per node can be used in DRM... :/
+#define numNodeDOF 2  // Only nodes with 3-dofs per node can be used in DRM... :/
 
 using namespace std;
 
@@ -82,7 +82,7 @@ bool read_int_dataset_into_array(const hid_t& h5drm_dataset, std::string dataset
 
 static int numH5DRMpatterns = 0;
 
-void* OPS_H5DRM()
+void* OPS_H5DRM2D()
 {
 
 	if (numH5DRMpatterns == 0)
@@ -160,7 +160,7 @@ void* OPS_H5DRM()
 
 
 
-	thePattern = new H5DRM(tag, filename,
+	thePattern = new H5DRM2D(tag, filename,
 	                       factor,
 	                       crd_scale,
 	                       distance_tolerance,
@@ -192,8 +192,8 @@ void* OPS_H5DRM()
 
 
 
-H5DRM::H5DRM()
-	: LoadPattern(0, PATTERN_TAG_H5DRM),
+H5DRM2D::H5DRM2D()
+	: LoadPattern(0, PATTERN_TAG_H5DRM2D),
 	  DRMForces(100),
 	  DRMDisplacements(100),
 	  DRMAccelerations(100),
@@ -235,7 +235,7 @@ H5DRM::H5DRM()
 	H5DRMout << "H5DRM - empty constructor\n";
 }
 
-H5DRM::H5DRM(
+H5DRM2D::H5DRM2D(
     int tag,
     std::string HDF5filename_,
     double cFactor_,
@@ -247,7 +247,7 @@ H5DRM::H5DRM(
     double T20, double T21, double T22,
     double x00, double x01, double x02
 )
-	: LoadPattern(tag, PATTERN_TAG_H5DRM),
+	: LoadPattern(tag, PATTERN_TAG_H5DRM2D),
 	  HDF5filename(HDF5filename_),
 	  DRMForces(100),
 	  DRMDisplacements(100),
@@ -293,7 +293,7 @@ H5DRM::H5DRM(
 	{
 		opserr << " \n"
 		       << "---------------------------------------------------------------------------\n"
-		       << "H5DRM - Domain reduction method load pattern. \n"
+		       << "H5DRM2D - Domain reduction method load pattern. \n"
 		       << "       \n"
 		       << "      By:  Jose Abell (Prof. Universidad de los Andes, Chile) \n"
 		       << "       \n"
@@ -322,7 +322,7 @@ H5DRM::H5DRM(
 // }
 
 
-void H5DRM::intitialize()
+void H5DRM2D::intitialize()
 {
 	Domain *theDomain = this->getDomain();
 
@@ -370,7 +370,7 @@ void H5DRM::intitialize()
 	Matrix xyz;
 	Vector drmbox_x0;
 	// read_double_dataset_into_vector(id_drm_file, "DRM_Metadata/drmbox_x0", drmbox_x0);
-	read_double_dataset_into_matrix(id_drm_file, "DRM_Data/xyz", xyz);
+	read_double_dataset_into_matrix(id_drm_file, "DRM_Data/xy", xyz);
 	read_int_dataset_into_id(id_drm_file, "DRM_Data/internal", internal);
 	read_int_dataset_into_id(id_drm_file, "DRM_Data/data_location", station_id2data_pos);
 	// read_scalar_double_dataset_into_double(id_drm_file, "DRM_Metadata/drmbox_xmax", drmbox_xmax);
@@ -496,7 +496,7 @@ void H5DRM::intitialize()
 			fprintf(fptr, "%d\n", NDRM_points);
 			for (int i = 0; i < NDRM_points; ++i)
 			{
-				fprintf(fptr, "%d %f %f %f\n", i + 1, xyz(i, 0), xyz(i, 1), xyz(i, 2));
+				fprintf(fptr, "%d %f %f %f\n", i + 1, xyz(i, 0), xyz(i, 1), 0.);
 			}
 			fprintf(fptr, "$EndNodes\n");
 			fprintf(fptr, "$Elements\n");
@@ -525,7 +525,7 @@ void H5DRM::intitialize()
 		while ((node_ptr = node_iter()) != 0)
 		{
 			const Vector& xyz_node = node_ptr->getCrds();
-			fprintf(fptrdrm, "%d %f %f %f\n", ++drmtag, xyz_node(0), xyz_node(1), xyz_node(2));
+			fprintf(fptrdrm, "%d %f %f %f\n", ++drmtag, xyz_node(0), xyz_node(1), 0.);
 		}
 		fprintf(fptrdrm, "$EndNodes\n");
 
@@ -546,9 +546,9 @@ void H5DRM::intitialize()
 	}
 
 	H5DRMout << "Found and connected " << n_nodes_found << " of " << NDRM_points << " nodes (d_err = " << d_err << ")\n";
-	DRMForces.resize(3 * n_nodes_found);
-	DRMDisplacements.resize(3 * n_nodes_found);
-	DRMAccelerations.resize(3 * n_nodes_found);
+	DRMForces.resize(numNodeDOF * n_nodes_found);
+	DRMDisplacements.resize(numNodeDOF * n_nodes_found);
+	DRMAccelerations.resize(numNodeDOF * n_nodes_found);
 
 	DRMForces.Zero();
 	DRMDisplacements.Zero();
@@ -674,8 +674,8 @@ void H5DRM::intitialize()
 		id_velocity_dataspace = H5Dget_space(id_velocity);
 
 		hsize_t rank_two_array = 2;
-		hsize_t one_node_data_dims[2] = {3, H5DRM_NUM_OF_PRECOMPUTED_TIMESTEPS};
-		hsize_t one_node_data_maxdims[2] = {3, H5DRM_NUM_OF_PRECOMPUTED_TIMESTEPS};
+		hsize_t one_node_data_dims[2] = {numNodeDOF, H5DRM_NUM_OF_PRECOMPUTED_TIMESTEPS};
+		hsize_t one_node_data_maxdims[2] = {numNodeDOF, H5DRM_NUM_OF_PRECOMPUTED_TIMESTEPS};
 		id_one_node_memspace  = H5Screate_simple(rank_two_array, one_node_data_dims, one_node_data_maxdims);       // create dataspace of memory
 	}
 
@@ -696,8 +696,8 @@ void H5DRM::intitialize()
 		id_acceleration_dataspace = H5Dget_space(id_acceleration);
 
 		hsize_t rank_two_array = 2;
-		hsize_t one_node_data_dims[2] = {3, H5DRM_NUM_OF_PRECOMPUTED_TIMESTEPS};
-		hsize_t one_node_data_maxdims[2] = {3, H5DRM_NUM_OF_PRECOMPUTED_TIMESTEPS};
+		hsize_t one_node_data_dims[2] = {numNodeDOF, H5DRM_NUM_OF_PRECOMPUTED_TIMESTEPS};
+		hsize_t one_node_data_maxdims[2] = {numNodeDOF, H5DRM_NUM_OF_PRECOMPUTED_TIMESTEPS};
 		id_one_node_memspace  = H5Screate_simple(rank_two_array, one_node_data_dims, one_node_data_maxdims);       // create dataspace of memory
 	}
 
@@ -718,8 +718,8 @@ void H5DRM::intitialize()
 		id_displacement_dataspace = H5Dget_space(id_displacement);
 
 		hsize_t rank_two_array = 2;
-		hsize_t one_node_data_dims[2] = {3, H5DRM_NUM_OF_PRECOMPUTED_TIMESTEPS};
-		hsize_t one_node_data_maxdims[2] = {3, H5DRM_NUM_OF_PRECOMPUTED_TIMESTEPS};
+		hsize_t one_node_data_dims[2] = {numNodeDOF, H5DRM_NUM_OF_PRECOMPUTED_TIMESTEPS};
+		hsize_t one_node_data_maxdims[2] = {numNodeDOF, H5DRM_NUM_OF_PRECOMPUTED_TIMESTEPS};
 		id_one_node_memspace  = H5Screate_simple(rank_two_array, one_node_data_dims, one_node_data_maxdims);       // create dataspace of memory
 	}
 
@@ -743,7 +743,7 @@ void H5DRM::intitialize()
 
 
 
-H5DRM::~H5DRM()
+H5DRM2D::~H5DRM2D()
 {
 	clean_all_data();
 	// for (int i = 0; i < 10; ++i)
@@ -754,7 +754,7 @@ H5DRM::~H5DRM()
 	// planes.clear();
 }
 
-void H5DRM::clean_all_data()
+void H5DRM2D::clean_all_data()
 {
 
 	nodetag2station_id.clear();
@@ -844,14 +844,14 @@ void H5DRM::clean_all_data()
 }
 
 void
-H5DRM::setDomain(Domain * theDomain)
+H5DRM2D::setDomain(Domain * theDomain)
 {
 	this->LoadPattern::setDomain(theDomain);
 }
 
 
 void
-H5DRM::applyLoad(double time)
+H5DRM2D::applyLoad(double time)
 {
 	if (!is_initialized)
 	{
@@ -871,12 +871,12 @@ H5DRM::applyLoad(double time)
 
 		if (theDomain == 0 || Elements.Size() == 0 || !computedLoads)
 		{
-			opserr << "H5DRM::applyLoad -- Error! Failed to compute DRM loads at time = " << time << endln;
+			opserr << "H5DRM2D::applyLoad -- Error! Failed to compute DRM loads at time = " << time << endln;
 			return;
 		}
 
 		Node *theNode = 0;
-		static Vector load(3);
+		static Vector load(numNodeDOF);
 		load.Zero();
 
 		FILE* fptr_forces = 0;
@@ -944,23 +944,21 @@ H5DRM::applyLoad(double time)
 
 			if (IsBoundary[local_pos])
 			{
-				load(0) = -DRMForces(3 * local_pos + 0);
-				load(1) = -DRMForces(3 * local_pos + 1);
-				load(2) = -DRMForces(3 * local_pos + 2);
+				load(0) = -DRMForces(numNodeDOF * local_pos + 0);
+				load(1) = -DRMForces(numNodeDOF * local_pos + 1);
 			}
 			else
 			{
-				load(0) = DRMForces(3 * local_pos + 0);
-				load(1) = DRMForces(3 * local_pos + 1);
-				load(2) = DRMForces(3 * local_pos + 2);
+				load(0) = DRMForces(numNodeDOF * local_pos + 0);
+				load(1) = DRMForces(numNodeDOF * local_pos + 1);
 			}
 
 
 			if (DEBUG_WITH_GMSH)
 			{
-				fprintf(fptr_forces, "%d %f %f %f\n", nodeTag, load(0), load(1), load(2));
-				fprintf(fptr_displ, "%d %f %f %f\n", nodeTag, DRMDisplacements(3 * local_pos + 0), DRMDisplacements(3 * local_pos + 1), DRMDisplacements(3 * local_pos + 2));
-				fprintf(fptr_accel, "%d %f %f %f\n", nodeTag, DRMAccelerations(3 * local_pos + 0), DRMAccelerations(3 * local_pos + 1), DRMAccelerations(3 * local_pos + 2));
+				fprintf(fptr_forces, "%d %f %f\n", nodeTag, load(0), load(1));
+				fprintf(fptr_displ, "%d %f %f\n", nodeTag, DRMDisplacements(numNodeDOF * local_pos + 0), DRMDisplacements(numNodeDOF * local_pos + 1));
+				fprintf(fptr_accel, "%d %f %f\n", nodeTag, DRMAccelerations(numNodeDOF * local_pos + 0), DRMAccelerations(numNodeDOF * local_pos + 1));
 			}
 			//Add to current nodal unbalanced load
 			theNode->addUnbalancedLoad(load);
@@ -980,7 +978,7 @@ H5DRM::applyLoad(double time)
 }
 
 
-bool H5DRM::ComputeDRMMotions(double next_integration_time)
+bool H5DRM2D::ComputeDRMMotions(double next_integration_time)
 {
 	bool have_displacement = id_displacement > 0;
 	bool have_acceleration = id_acceleration > 0;
@@ -1022,7 +1020,7 @@ bool H5DRM::ComputeDRMMotions(double next_integration_time)
 	return have_computed;
 }
 
-bool H5DRM::drm_direct_read(double t)
+bool H5DRM2D::drm_direct_read(double t)
 {
 
 	if (Nodes.Size() == 0)
@@ -1066,17 +1064,17 @@ bool H5DRM::drm_direct_read(double t)
 		int data_pos = station_id2data_pos[station_id];
 		int local_pos = nodetag2local_pos[nodeTag];
 
-		double d1[3], d2[3];
-		double a1[3], a2[3];
+		double d1[numNodeDOF], d2[numNodeDOF];
+		double a1[numNodeDOF], a2[numNodeDOF];
 
-		d1[0] = d1[1] = d1[2] = 0.;
-		d2[0] = d2[1] = d2[2] = 0.;
-		a1[0] = a1[1] = a1[2] = 0.;
-		a2[0] = a2[1] = a2[2] = 0.;
+		d1[0] = d1[1] = 0.;
+		d2[0] = d2[1] = 0.;
+		a1[0] = a1[1] = 0.;
+		a2[0] = a2[1] = 0.;
 
 		hsize_t start[2]  = {(hsize_t) data_pos , (hsize_t) i1};
 		hsize_t stride[2] = {1                  , 1};
-		hsize_t count[2]  = {3                  , 1};
+		hsize_t count[2]  = {numNodeDOF         , 1};
 		hsize_t block[2]  = {1                  , 1};
 
 		//Selection in dataspace
@@ -1090,14 +1088,14 @@ bool H5DRM::drm_direct_read(double t)
 
 		//Selection in memspace
 		hsize_t rank_one_array = 1;
-		hsize_t one_node_data_dims[1] = {3};
-		hsize_t one_node_data_maxdims[1] = {3};
+		hsize_t one_node_data_dims[1] = {numNodeDOF};
+		hsize_t one_node_data_maxdims[1] = {numNodeDOF};
 		hid_t memspace  = H5Screate_simple(rank_one_array, one_node_data_dims, one_node_data_maxdims);       // create dataspace of memory
 
 
 		hsize_t mem_start[1] = {0};
 		hsize_t mem_stride[1] = {1};
-		hsize_t mem_count[1] = {3};
+		hsize_t mem_count[1] = {numNodeDOF};
 		hsize_t mem_block[1] = {1};
 		H5Sselect_hyperslab(
 		    memspace,
@@ -1124,7 +1122,7 @@ bool H5DRM::drm_direct_read(double t)
 		H5Sclose(memspace);
 
 		bool nanfound = false;
-		for (int i = 0; i < 3; ++i)
+		for (int i = 0; i < numNodeDOF; ++i)
 		{
 			if ( isnan(d1[i])  ||
 			        isnan(a1[i])  ||
@@ -1146,7 +1144,7 @@ bool H5DRM::drm_direct_read(double t)
 
 		if (errorflag1 < 0 || errorflag2 < 0 || errorflag3 < 0 || errorflag4 < 0 || nanfound)
 		{
-			H5DRMerror << "H5DRM::drm_direct_read - Failed to read displacement or acceleration array!!\n" <<
+			H5DRMerror << "H5DRM2D::drm_direct_read - Failed to read displacement or acceleration array!!\n" <<
 			           " n = " << n << endln <<
 			           " nodeTag = " << nodeTag << endln <<
 			           " station_id = " << station_id << endln <<
@@ -1175,13 +1173,11 @@ bool H5DRM::drm_direct_read(double t)
 		// a2[2] = -a2[2];
 
 
-		DRMDisplacements(3 * local_pos + 0) = d1[0] * (1 - dtau) + d2[0] * (dtau);
-		DRMDisplacements(3 * local_pos + 1) = d1[1] * (1 - dtau) + d2[1] * (dtau);
-		DRMDisplacements(3 * local_pos + 2) = d1[2] * (1 - dtau) + d2[2] * (dtau);
+		DRMDisplacements(numNodeDOF * local_pos + 0) = d1[0] * (1 - dtau) + d2[0] * (dtau);
+		DRMDisplacements(numNodeDOF * local_pos + 1) = d1[1] * (1 - dtau) + d2[1] * (dtau);
 
-		DRMAccelerations(3 * local_pos + 0) = a1[0] * (1 - dtau) + a2[0] * (dtau);
-		DRMAccelerations(3 * local_pos + 1) = a1[1] * (1 - dtau) + a2[1] * (dtau);
-		DRMAccelerations(3 * local_pos + 2) = a1[2] * (1 - dtau) + a2[2] * (dtau);
+		DRMAccelerations(numNodeDOF * local_pos + 0) = a1[0] * (1 - dtau) + a2[0] * (dtau);
+		DRMAccelerations(numNodeDOF * local_pos + 1) = a1[1] * (1 - dtau) + a2[1] * (dtau);
 	}
 
 
@@ -1191,7 +1187,7 @@ bool H5DRM::drm_direct_read(double t)
 }
 
 
-bool H5DRM::drm_differentiate_displacements(double t)
+bool H5DRM2D::drm_differentiate_displacements(double t)
 {
 
 	if (Nodes.Size() == 0)
@@ -1249,22 +1245,22 @@ bool H5DRM::drm_differentiate_displacements(double t)
 		int data_pos = station_id2data_pos[station_id];
 		int local_pos = nodetag2local_pos[nodeTag];
 
-		double d0[3][4];
-		double d1[3], d2[3];
-		double a1[3], a2[3];
+		double d0[numNodeDOF][4];
+		double d1[numNodeDOF], d2[numNodeDOF];
+		double a1[numNodeDOF], a2[numNodeDOF];
 
-		d0[0][0] = d0[1][0] = d0[2][0] = 0.;
-		d0[0][1] = d0[1][1] = d0[2][1] = 0.;
-		d0[0][2] = d0[1][2] = d0[2][2] = 0.;
-		d0[0][3] = d0[1][3] = d0[2][3] = 0.;
-		d1[0] = d1[1] = d1[2] = 0.;
-		d2[0] = d2[1] = d2[2] = 0.;
-		a1[0] = a1[1] = a1[2] = 0.;
-		a2[0] = a2[1] = a2[2] = 0.;
+		d0[0][0] = d0[1][0] = 0.;
+		d0[0][1] = d0[1][1] = 0.;
+		d0[0][2] = d0[1][2] = 0.;
+		d0[0][3] = d0[1][3] = 0.;
+		d1[0] = d1[1] = 0.;
+		d2[0] = d2[1] = 0.;
+		a1[0] = a1[1] = 0.;
+		a2[0] = a2[1] = 0.;
 
 		hsize_t start[2]  = {(hsize_t) data_pos , (hsize_t) i_first};
 		hsize_t stride[2] = {1                  , 1};
-		hsize_t count[2]  = {3                  , i_len};
+		hsize_t count[2]  = {numNodeDOF         , i_len};
 		hsize_t block[2]  = {1                  , 1};
 
 		//Selection in dataspace
@@ -1274,14 +1270,14 @@ bool H5DRM::drm_differentiate_displacements(double t)
 
 		//Selection in memspace
 		hsize_t rank_two_array = 2;
-		hsize_t one_node_data_dims[2] = {3, i_len};
-		hsize_t one_node_data_maxdims[2] = {3, i_len};
+		hsize_t one_node_data_dims[2] = {numNodeDOF, i_len};
+		hsize_t one_node_data_maxdims[2] = {numNodeDOF, i_len};
 		hid_t memspace  = H5Screate_simple(rank_two_array, one_node_data_dims, one_node_data_maxdims);       // create dataspace of memory
 
 
 		hsize_t mem_start[2] = {0, 0};
 		hsize_t mem_stride[2] = {1, 1};
-		hsize_t mem_count[2] = {3, i_len};
+		hsize_t mem_count[2] = {numNodeDOF, i_len};
 		hsize_t mem_block[2] = {1, 1};
 		H5Sselect_hyperslab(
 		    memspace,
@@ -1296,7 +1292,7 @@ bool H5DRM::drm_differentiate_displacements(double t)
 		}
 
 
-		for (int dof = 0; dof < 3; ++dof)
+		for (int dof = 0; dof < numNodeDOF; ++dof)
 		{
 			d1[dof] = d0[dof][1];
 			d2[dof] = d0[dof][2];
@@ -1308,7 +1304,7 @@ bool H5DRM::drm_differentiate_displacements(double t)
 		H5Sclose(memspace);
 
 		bool nanfound = false;
-		for (int i = 0; i < 3; ++i)
+		for (int i = 0; i < numNodeDOF; ++i)
 		{
 
 			if ( isnan(d1[i])  ||
@@ -1356,13 +1352,11 @@ bool H5DRM::drm_differentiate_displacements(double t)
 		// a2[2] = -a2[2];
 
 
-		DRMDisplacements(3 * local_pos + 0) = d1[0] * (1 - dtau) + d2[0] * (dtau);
-		DRMDisplacements(3 * local_pos + 1) = d1[1] * (1 - dtau) + d2[1] * (dtau);
-		DRMDisplacements(3 * local_pos + 2) = d1[2] * (1 - dtau) + d2[2] * (dtau);
+		DRMDisplacements(numNodeDOF * local_pos + 0) = d1[0] * (1 - dtau) + d2[0] * (dtau);
+		DRMDisplacements(numNodeDOF * local_pos + 1) = d1[1] * (1 - dtau) + d2[1] * (dtau);
 
-		DRMAccelerations(3 * local_pos + 0) = a1[0] * (1 - dtau) + a2[0] * (dtau);
-		DRMAccelerations(3 * local_pos + 1) = a1[1] * (1 - dtau) + a2[1] * (dtau);
-		DRMAccelerations(3 * local_pos + 2) = a1[2] * (1 - dtau) + a2[2] * (dtau);
+		DRMAccelerations(numNodeDOF * local_pos + 0) = a1[0] * (1 - dtau) + a2[0] * (dtau);
+		DRMAccelerations(numNodeDOF * local_pos + 1) = a1[1] * (1 - dtau) + a2[1] * (dtau);
 	}
 
 	H5DRMout << "t = " << t << " u = (" << umin << ", " << umax << ") a = (" << amin << ", " << amax << ")" << endln;
@@ -1370,7 +1364,7 @@ bool H5DRM::drm_differentiate_displacements(double t)
 	return true;
 }
 
-bool H5DRM::drm_integrate_velocity(double next_integration_time)
+bool H5DRM2D::drm_integrate_velocity(double next_integration_time)
 {
 
 	exit(-1);
@@ -1657,7 +1651,7 @@ bool H5DRM::drm_integrate_velocity(double next_integration_time)
 
 
 bool
-H5DRM::ComputeDRMLoads(double t)
+H5DRM2D::ComputeDRMLoads(double t)
 {
 	if (myrank == 0)
 	{
@@ -1665,8 +1659,8 @@ H5DRM::ComputeDRMLoads(double t)
 	}
 
 
-	int NDOF = 3;
-	int NIEMAX = 8;
+	int NDOF = numNodeDOF;
+	int NIEMAX = 4;
 	static Vector Fm(NIEMAX * NDOF); Fm.Zero();
 	static Vector Fk(NIEMAX * NDOF); Fk.Zero();
 	static Vector u_e(NIEMAX * NDOF); u_e.Zero();
@@ -1695,7 +1689,7 @@ H5DRM::ComputeDRMLoads(double t)
 		Domain *theDomain = this->getDomain();
 
 		Element *theElement = theDomain->getElement( Elements[0] );
-		int NIE = 8;
+		int NIE = NIEMAX;
 		B_node.resize(NIEMAX);
 		E_node.resize(NIEMAX);
 
@@ -1757,10 +1751,10 @@ H5DRM::ComputeDRMLoads(double t)
 								Ke( E_node(m)*NDOF + d, E_node(n)*NDOF + e ) = 0.0;
 							}
 
-				u_e.resize(3 * NIE);
-				udd_e.resize(3 * NIE);
-				Fm.resize(3 * NIE);
-				Fk.resize(3 * NIE);
+				u_e.resize(numNodeDOF * NIE);
+				udd_e.resize(numNodeDOF * NIE);
+				Fm.resize(numNodeDOF * NIE);
+				Fk.resize(numNodeDOF * NIE);
 
 				u_e.Zero();
 				udd_e.Zero();
@@ -1771,12 +1765,10 @@ H5DRM::ComputeDRMLoads(double t)
 				{
 					int nodeTag = elementNodes(k);
 					int local_pos = nodetag2local_pos[nodeTag];
-					u_e(3 * k      ) = DRMDisplacements[3 * local_pos];// - DRMDisplacements0[3 * local_pos] ;
-					u_e(3 * k + 1  ) = DRMDisplacements[3 * local_pos + 1];// - DRMDisplacements0[3 * local_pos + 1] ;
-					u_e(3 * k + 2  ) = DRMDisplacements[3 * local_pos + 2];// - DRMDisplacements0[3 * local_pos + 2] ;
-					udd_e(3 * k    ) = DRMAccelerations[3 * local_pos];
-					udd_e(3 * k + 1) = DRMAccelerations[3 * local_pos + 1];
-					udd_e(3 * k + 2) = DRMAccelerations[3 * local_pos + 2];
+					u_e(numNodeDOF * k      ) = DRMDisplacements[numNodeDOF * local_pos];// - DRMDisplacements0[3 * local_pos] ;
+					u_e(numNodeDOF * k + 1  ) = DRMDisplacements[numNodeDOF * local_pos + 1];// - DRMDisplacements0[3 * local_pos + 1] ;
+					udd_e(numNodeDOF * k    ) = DRMAccelerations[numNodeDOF * local_pos];
+					udd_e(numNodeDOF * k + 1) = DRMAccelerations[numNodeDOF * local_pos + 1];
 				}
 				// cout << endl;
 
@@ -1787,14 +1779,12 @@ H5DRM::ComputeDRMLoads(double t)
 				{
 					int nodeTag = elementNodes(k);
 					int local_pos = nodetag2local_pos[nodeTag];
-					DRMForces( 3 * local_pos  + 0) +=  Fk(3 * k  + 0) + Fm(3 * k  + 0);
-					DRMForces( 3 * local_pos  + 1) +=  Fk(3 * k  + 1) + Fm(3 * k  + 1);
-					DRMForces( 3 * local_pos  + 2) +=  Fk(3 * k  + 2) + Fm(3 * k  + 2);
+					DRMForces( numNodeDOF * local_pos  + 0) +=  Fk(numNodeDOF * k  + 0) + Fm(numNodeDOF * k  + 0);
+					DRMForces( numNodeDOF * local_pos  + 1) +=  Fk(numNodeDOF * k  + 1) + Fm(numNodeDOF * k  + 1);
 
 
-					if (isnan(DRMForces( 3 * local_pos  + 0) ) ||
-					        isnan(DRMForces( 3 * local_pos  + 1) ) ||
-					        isnan(DRMForces( 3 * local_pos  + 2) ) )
+					if (isnan(DRMForces( numNodeDOF * local_pos  + 0) ) ||
+					        isnan(DRMForces( numNodeDOF * local_pos  + 1) ) )
 					{
 						H5DRMerror << "NAN Detected!!! \n";
 						H5DRMerror << "    nodeTag = " << nodeTag << endln;
@@ -1845,29 +1835,30 @@ H5DRM::ComputeDRMLoads(double t)
 
 
 int
-H5DRM::sendSelf(int commitTag, Channel & theChannel)
+H5DRM2D::sendSelf(int commitTag, Channel & theChannel)
 {
+  int dbTag = this->getDbTag();
 
 	H5DRMout << "sending filename: " << HDF5filename << endl;
+
+	char drmfilename[H5DRM_MAX_FILENAME];
+	strcpy(drmfilename, HDF5filename.c_str());
+	Message filename_msg(drmfilename, H5DRM_MAX_FILENAME);
+
+	if (theChannel.sendMsg(dbTag, commitTag, filename_msg) < 0)
+	{
+		cerr << "H5DRM2D::sendSelf -- failed to send HDF5filename\n";
+		return -1;
+	}
 
 	static Vector data(3);
 	data(0) = cFactor;
 	data(1) = crd_scale;
 	data(2) = distance_tolerance;
 
-	char drmfilename[H5DRM_MAX_FILENAME];
-	strcpy(drmfilename, HDF5filename.c_str());
-	Message filename_msg(drmfilename, H5DRM_MAX_FILENAME);
-
-	if (theChannel.sendMsg(0, 0, filename_msg) < 0)
+	if (theChannel.sendVector(dbTag, commitTag, data) < 0)
 	{
-		cerr << "H5DRM::sendSelf -- failed to send HDF5filename\n";
-		return -1;
-	}
-
-	if (theChannel.sendVector(0, 0, data) < 0)
-	{
-		cerr << "H5DRM::sendSelf -- failed to send cFactor\n";
+		cerr << "H5DRM2D::sendSelf -- failed to send cFactor\n";
 		return -1;
 	}
 
@@ -1876,9 +1867,11 @@ H5DRM::sendSelf(int commitTag, Channel & theChannel)
 }
 
 int
-H5DRM::recvSelf(int commitTag, Channel & theChannel,
+H5DRM2D::recvSelf(int commitTag, Channel & theChannel,
                 FEM_ObjectBroker & theBroker)
 {
+  int dbTag = this->getDbTag();
+  
 	H5DRMout << "receiving...\n";
 	static Vector data(3);
 	char drmfilename[H5DRM_MAX_FILENAME];
@@ -1886,15 +1879,15 @@ H5DRM::recvSelf(int commitTag, Channel & theChannel,
 
 	// strcpy(drmfilename, HDF5filename.c_str());
 
-	if (theChannel.recvMsg(0, 0, filename_msg) < 0)
+	if (theChannel.recvMsg(dbTag, commitTag, filename_msg) < 0)
 	{
-		cerr << "H5DRM::receiveSelf -- failed to receive HDF5filename\n";
+		cerr << "H5DRM2D::receiveSelf -- failed to receive HDF5filename\n";
 		return -1;
 	}
 
-	if (theChannel.recvVector(0, 0, data) < 0)
+	if (theChannel.recvVector(dbTag, commitTag, data) < 0)
 	{
-		cerr << "H5DRM::receiveSelf -- failed to receive cFactor\n";
+		cerr << "H5DRM2D::receiveSelf -- failed to receive cFactor\n";
 		return -1;
 	}
 	cFactor = data(0);
@@ -1903,13 +1896,13 @@ H5DRM::recvSelf(int commitTag, Channel & theChannel,
 
 	HDF5filename = drmfilename;
 	H5DRMout << "received filename is " <<  drmfilename << "\n";
-  H5DRMout << "received cFactor is " <<  cFactor << "\n";
+	H5DRMout << "received cFactor is " <<  cFactor << "\n";
 
 	return 0;
 }
 
 void
-H5DRM::Print(ostream & s, int flag)
+H5DRM2D::Print(ostream & s, int flag)
 {
 
 }
@@ -1918,15 +1911,15 @@ H5DRM::Print(ostream & s, int flag)
 
 // method to obtain a blank copy of the LoadPattern
 LoadPattern *
-H5DRM::getCopy(void)
+H5DRM2D::getCopy(void)
 {
-	return new H5DRM(this->getTag(), HDF5filename);
+	return new H5DRM2D(this->getTag(), HDF5filename);
 }
 
 
 
 Vector *
-H5DRM::getNodalLoad(int nodeTag, double time)
+H5DRM2D::getNodalLoad(int nodeTag, double time)
 {
 
 
@@ -1936,7 +1929,7 @@ H5DRM::getNodalLoad(int nodeTag, double time)
 
 
 
-void H5DRM::node_matching_UsePlaneInfo(double d_tol, const ID & internal, const Matrix & xyz, const Vector & drmbox_x0, double & d_err, int & n_nodes_found)
+void H5DRM2D::node_matching_UsePlaneInfo(double d_tol, const ID & internal, const Matrix & xyz, const Vector & drmbox_x0, double & d_err, int & n_nodes_found)
 {
 
 	// char debugfilename[100];
@@ -2018,14 +2011,14 @@ void H5DRM::node_matching_UsePlaneInfo(double d_tol, const ID & internal, const 
 
 
 
-void H5DRM::node_matching_OctTree(double d_tol, const ID & internal, const Matrix & xyz, const Vector & drmbox_x0, double & d_err, int & n_nodes_found)
+void H5DRM2D::node_matching_OctTree(double d_tol, const ID & internal, const Matrix & xyz, const Vector & drmbox_x0, double & d_err, int & n_nodes_found)
 {
 	return;
 }
 
 
 
-void H5DRM::node_matching_BruteForce(double d_tol, const ID & internal, const Matrix & xyz, const Vector & drmbox_x0, double & d_err, int & n_nodes_found)
+void H5DRM2D::node_matching_BruteForce(double d_tol, const ID & internal, const Matrix & xyz, const Vector & drmbox_x0, double & d_err, int & n_nodes_found)
 {
 
 	if (myrank == 0)
@@ -2060,6 +2053,9 @@ void H5DRM::node_matching_BruteForce(double d_tol, const ID & internal, const Ma
 	int local_pos = 0;
 	while ((node_ptr = node_iter()) != 0)
 	{
+    if (node_ptr->getNumberDOF() > 2)
+      continue;
+
 		int tag = node_ptr->getTag();
 		const Vector& node_xyz  =  node_ptr->getCrds();
 		double dmin = std::numeric_limits<double>::infinity();
@@ -2067,15 +2063,14 @@ void H5DRM::node_matching_BruteForce(double d_tol, const ID & internal, const Ma
 
 		if (DEBUG_NODE_MATCHING)
 		{
-			fprintf(fptrdrm, "%d %f %f %f\n", ++drmtag, node_xyz[0] , node_xyz[1] , node_xyz[2] );
+			fprintf(fptrdrm, "%d %f %f\n", ++drmtag, node_xyz[0] , node_xyz[1]);
 		}
 
-		Vector station_xyz(3);
+		Vector station_xyz(2);
 		for (int ii = 0; ii < xyz.noRows(); ++ii)
 		{
 			station_xyz(0) = xyz(ii, 0);
 			station_xyz(1) = xyz(ii, 1);
-			station_xyz(2) = xyz(ii, 2);
 			double d = (node_xyz - station_xyz).Norm();
 			if (d < dmin)
 			{
@@ -2087,8 +2082,8 @@ void H5DRM::node_matching_BruteForce(double d_tol, const ID & internal, const Ma
 		if (fabs(dmin) < d_tol)
 		{
 			int station_id = ii_station_min;
-			static Vector station_xyz(3);
-			for (int dir = 0; dir < 3; ++dir)
+			static Vector station_xyz(numNodeDOF);
+			for (int dir = 0; dir < numNodeDOF; ++dir)
 			{
 				station_xyz(dir) = xyz(station_id, dir);
 			}
@@ -2111,8 +2106,8 @@ void H5DRM::node_matching_BruteForce(double d_tol, const ID & internal, const Ma
 		{
 			if (DEBUG_NODE_MATCHING)
 			{
-				fprintf(fptrdrm, "Node # %05d @ (%4.2f, %4.2f, %4.2f) rejected \n", tag, node_xyz(0) , node_xyz(1) , node_xyz(2) );
-				fprintf(fptrdrm, "closest pal @ (%4.2f, %4.2f, %4.2f) ii =  %05d  with dmin = %f \n", xyz(ii_station_min, 0) , xyz(ii_station_min, 1) , xyz(ii_station_min, 2), ii_station_min , dmin);
+				fprintf(fptrdrm, "Node # %05d @ (%4.2f, %4.2f) rejected \n", tag, node_xyz(0) , node_xyz(1));
+				fprintf(fptrdrm, "closest pal @ (%4.2f, %4.2f) ii =  %05d  with dmin = %f \n", xyz(ii_station_min, 0) , xyz(ii_station_min, 1), ii_station_min , dmin);
 			}
 		}
 	}
@@ -2190,226 +2185,226 @@ void H5DRM::node_matching_BruteForce(double d_tol, const ID & internal, const Ma
 
 
 
-Vector H5DRM_calculate_cross_product(const Vector & a, const Vector & b)
-{
-	Vector a_cross_b(3); // Store the result here
+// Vector H5DRM_calculate_cross_product(const Vector & a, const Vector & b)
+// {
+// 	Vector a_cross_b(3); // Store the result here
 
-	if ( (a.Size() != 3) || (b.Size() != 3) )
-	{
-		opserr << "Error: H5DRM_calculate_cross_product only defined for 3x1 vectors.\n";
-		exit(-1);
-	}
+// 	if ( (a.Size() != 3) || (b.Size() != 3) )
+// 	{
+// 		opserr << "Error: H5DRM_calculate_cross_product only defined for 3x1 vectors.\n";
+// 		exit(-1);
+// 	}
 
-	a_cross_b(0) =   a(1) * b(2) - b(1) * a(2);
-	a_cross_b(1) = - a(0) * b(2) + b(0) * a(2);
-	a_cross_b(2) =   a(0) * b(1) - b(0) * a(1);
+// 	a_cross_b(0) =   a(1) * b(2) - b(1) * a(2);
+// 	a_cross_b(1) = - a(0) * b(2) + b(0) * a(2);
+// 	a_cross_b(2) =   a(0) * b(1) - b(0) * a(1);
 
-	return a_cross_b;
-}
+// 	return a_cross_b;
+// }
 
-bool read_int_dataset_into_id(const hid_t & h5drm_dataset, std::string dataset_name, ID & result)
-{
-	// opserr << "read_int_dataset_into_id dataset_name: " << dataset_name.c_str() << endln;
-	hid_t id_dataset = H5Dopen(h5drm_dataset, dataset_name.c_str(), H5P_DEFAULT);
-	hid_t id_dataspace = H5Dget_space(id_dataset);
-	int ndims = H5Sget_simple_extent_ndims( id_dataspace);
-	if (ndims != 1)
-	{
-		opserr << "H5DRM !! failure trying to open dataset: " << dataset_name.c_str() << endln;
-		opserr << "H5DRM !! read_int_dataset_into_id - array dimension should be 1\n";
-		Vector error(-1);
-		return false;
-	}
-	hsize_t dim;
-	hsize_t maxdim;
-	H5Sget_simple_extent_dims(id_dataspace, &dim, &maxdim);
-	H5Sselect_all( id_dataspace );
-	hid_t id_memspace  = H5Screate_simple(1, &dim, 0);       // create dataspace of memory
-	hid_t id_xfer_plist = H5Pcreate(H5P_DATASET_XFER);
+// bool read_int_dataset_into_id(const hid_t & h5drm_dataset, std::string dataset_name, ID & result)
+// {
+// 	// opserr << "read_int_dataset_into_id dataset_name: " << dataset_name.c_str() << endln;
+// 	hid_t id_dataset = H5Dopen(h5drm_dataset, dataset_name.c_str(), H5P_DEFAULT);
+// 	hid_t id_dataspace = H5Dget_space(id_dataset);
+// 	int ndims = H5Sget_simple_extent_ndims( id_dataspace);
+// 	if (ndims != 1)
+// 	{
+// 		opserr << "H5DRM !! failure trying to open dataset: " << dataset_name.c_str() << endln;
+// 		opserr << "H5DRM !! read_int_dataset_into_id - array dimension should be 1\n";
+// 		Vector error(-1);
+// 		return false;
+// 	}
+// 	hsize_t dim;
+// 	hsize_t maxdim;
+// 	H5Sget_simple_extent_dims(id_dataspace, &dim, &maxdim);
+// 	H5Sselect_all( id_dataspace );
+// 	hid_t id_memspace  = H5Screate_simple(1, &dim, 0);       // create dataspace of memory
+// 	hid_t id_xfer_plist = H5Pcreate(H5P_DATASET_XFER);
 
-	//int d[dim];
-	int *d = new int[dim];
+// 	//int d[dim];
+// 	int *d = new int[dim];
 
-	H5Dread( id_dataset, H5T_NATIVE_INT, id_memspace, id_dataspace, id_xfer_plist,  d);
-	result.resize(dim);
-	for (hsize_t i = 0; i < dim; ++i)
-	{
-		result(i) = d[i];
-	}
+// 	H5Dread( id_dataset, H5T_NATIVE_INT, id_memspace, id_dataspace, id_xfer_plist,  d);
+// 	result.resize(dim);
+// 	for (hsize_t i = 0; i < dim; ++i)
+// 	{
+// 		result(i) = d[i];
+// 	}
 
-	H5Sclose(id_dataspace);
-	H5Sclose(id_memspace);
-	H5Dclose(id_dataset);
+// 	H5Sclose(id_dataspace);
+// 	H5Sclose(id_memspace);
+// 	H5Dclose(id_dataset);
 
-	delete [] d;
+// 	delete [] d;
 
-	return true;
-}
+// 	return true;
+// }
 
-bool read_double_dataset_into_vector(const hid_t & h5drm_dataset, std::string dataset_name, Vector & result)
-{
-	// opserr << "read_double_dataset_into_vector dataset_name: " << dataset_name.c_str() << endln;
-	hid_t id_dataset = H5Dopen(h5drm_dataset, dataset_name.c_str(), H5P_DEFAULT);
-	hid_t id_dataspace = H5Dget_space(id_dataset);
-	int ndims = H5Sget_simple_extent_ndims( id_dataspace);
-	if (ndims != 1)
-	{
-		opserr << "H5DRM !! failure trying to open dataset: " << dataset_name.c_str() << endln;
-		opserr << "H5DRM !! read_double_dataset_into_vector - array dimension should be 1.\n";
-		Vector error(-1);
-		return false;
-	}
-	hsize_t dim;
-	hsize_t maxdim;
-	H5Sget_simple_extent_dims(id_dataspace, &dim, &maxdim);
-	H5Sselect_all( id_dataspace );
-	hid_t id_memspace  = H5Screate_simple(1, &dim, 0);       // create dataspace of memory
-	hid_t id_xfer_plist = H5Pcreate(H5P_DATASET_XFER);
+// bool read_double_dataset_into_vector(const hid_t & h5drm_dataset, std::string dataset_name, Vector & result)
+// {
+// 	// opserr << "read_double_dataset_into_vector dataset_name: " << dataset_name.c_str() << endln;
+// 	hid_t id_dataset = H5Dopen(h5drm_dataset, dataset_name.c_str(), H5P_DEFAULT);
+// 	hid_t id_dataspace = H5Dget_space(id_dataset);
+// 	int ndims = H5Sget_simple_extent_ndims( id_dataspace);
+// 	if (ndims != 1)
+// 	{
+// 		opserr << "H5DRM !! failure trying to open dataset: " << dataset_name.c_str() << endln;
+// 		opserr << "H5DRM !! read_double_dataset_into_vector - array dimension should be 1.\n";
+// 		Vector error(-1);
+// 		return false;
+// 	}
+// 	hsize_t dim;
+// 	hsize_t maxdim;
+// 	H5Sget_simple_extent_dims(id_dataspace, &dim, &maxdim);
+// 	H5Sselect_all( id_dataspace );
+// 	hid_t id_memspace  = H5Screate_simple(1, &dim, 0);       // create dataspace of memory
+// 	hid_t id_xfer_plist = H5Pcreate(H5P_DATASET_XFER);
 
-	//double d[dim];
-	double *d = new double[dim];
+// 	//double d[dim];
+// 	double *d = new double[dim];
 
-	H5Dread( id_dataset, H5T_NATIVE_DOUBLE, id_memspace, id_dataspace, id_xfer_plist,  d);
-	result.resize(dim);
-	for (hsize_t i = 0; i < dim; ++i)
-	{
-		result(i) = d[i];
-	}
+// 	H5Dread( id_dataset, H5T_NATIVE_DOUBLE, id_memspace, id_dataspace, id_xfer_plist,  d);
+// 	result.resize(dim);
+// 	for (hsize_t i = 0; i < dim; ++i)
+// 	{
+// 		result(i) = d[i];
+// 	}
 
-	H5Sclose(id_dataspace);
-	H5Sclose(id_memspace);
-	H5Dclose(id_dataset);
-	delete [] d;
-	return true;
-}
-
-
-bool read_scalar_double_dataset_into_double(const hid_t & h5drm_dataset, std::string dataset_name, double & result)
-{
-	// opserr << "read_scalar_double_dataset_into_double dataset_name: " << dataset_name.c_str() << endln;
-	hid_t id_dataset = H5Dopen(h5drm_dataset, dataset_name.c_str(), H5P_DEFAULT);
-	hid_t id_dataspace = H5Dget_space(id_dataset);
-	int ndims = H5Sget_simple_extent_ndims( id_dataspace);
-	if (ndims != 0)
-	{
-		opserr << "H5DRM !! failure trying to open dataset: " << dataset_name.c_str() << endln;
-		opserr << "H5DRM !! read_scalar_double_dataset_into_double - array dimension should be 0\n";
-		Vector error(-1);
-		return false;
-	}
-	H5Sselect_all( id_dataspace );
-	hsize_t dim = 1;
-	hid_t id_memspace  = H5Screate_simple(1, &dim, 0);       // create dataspace of memory
-	hid_t id_xfer_plist = H5Pcreate(H5P_DATASET_XFER);
-
-	H5Dread( id_dataset, H5T_NATIVE_DOUBLE, id_memspace, id_dataspace, id_xfer_plist,  &result);
-
-	H5Sclose(id_dataspace);
-	H5Sclose(id_memspace);
-	H5Dclose(id_dataset);
-
-	return true;
-}
+// 	H5Sclose(id_dataspace);
+// 	H5Sclose(id_memspace);
+// 	H5Dclose(id_dataset);
+// 	delete [] d;
+// 	return true;
+// }
 
 
+// bool read_scalar_double_dataset_into_double(const hid_t & h5drm_dataset, std::string dataset_name, double & result)
+// {
+// 	// opserr << "read_scalar_double_dataset_into_double dataset_name: " << dataset_name.c_str() << endln;
+// 	hid_t id_dataset = H5Dopen(h5drm_dataset, dataset_name.c_str(), H5P_DEFAULT);
+// 	hid_t id_dataspace = H5Dget_space(id_dataset);
+// 	int ndims = H5Sget_simple_extent_ndims( id_dataspace);
+// 	if (ndims != 0)
+// 	{
+// 		opserr << "H5DRM !! failure trying to open dataset: " << dataset_name.c_str() << endln;
+// 		opserr << "H5DRM !! read_scalar_double_dataset_into_double - array dimension should be 0\n";
+// 		Vector error(-1);
+// 		return false;
+// 	}
+// 	H5Sselect_all( id_dataspace );
+// 	hsize_t dim = 1;
+// 	hid_t id_memspace  = H5Screate_simple(1, &dim, 0);       // create dataspace of memory
+// 	hid_t id_xfer_plist = H5Pcreate(H5P_DATASET_XFER);
 
-bool read_double_dataset_into_matrix(const hid_t & h5drm_dataset, std::string dataset_name, Matrix & result)
-{
-	// opserr << "read_double_dataset_into_matrix dataset_name: " << dataset_name.c_str() << endln;
-	hid_t id_dataset = H5Dopen(h5drm_dataset, dataset_name.c_str(), H5P_DEFAULT);
-	hid_t id_dataspace = H5Dget_space(id_dataset);
-	int ndims = H5Sget_simple_extent_ndims( id_dataspace);
-	if (ndims != 2)
-	{
-		opserr << "H5DRM !! failure trying to open dataset: " << dataset_name.c_str() << endln;
-		opserr << "H5DRM !! read_double_dataset_into_matrix - array dimension should be 2\n";
-		Vector error(-1);
-		return false;
-	}
-	hsize_t dim[2];
-	hsize_t maxdim[2];
-	H5Sget_simple_extent_dims(id_dataspace, dim, maxdim);
-	H5Sselect_all( id_dataspace );
-	hid_t id_memspace  = H5Screate_simple(2, dim, 0);       // create dataspace of memory
-	hid_t id_xfer_plist = H5Pcreate(H5P_DATASET_XFER);
+// 	H5Dread( id_dataset, H5T_NATIVE_DOUBLE, id_memspace, id_dataspace, id_xfer_plist,  &result);
 
-	//double d[dim[0]][dim[1]];
-	// double **d = new double *[(int) dim[0]];
-	double *d = new double [dim[0]*dim[1]];
+// 	H5Sclose(id_dataspace);
+// 	H5Sclose(id_memspace);
+// 	H5Dclose(id_dataset);
 
-	if (d == 0)
-	{
-		opserr << "Fatal! no memory! 2163" << endln;
-		exit(-1);
-	}
-
-	// for (int i = 0; i < dim[0]; i++) {
-	// 	d[i] = new double [(int) dim[1]];
-
-	// 	if (d[i] == 0)
-	// 	{
-	// 		opserr << "Fatal! no memory! 2172" << endln;
-	// 		exit(-1);
-	// 	}
-	// }
-
-	H5Dread( id_dataset, H5T_NATIVE_DOUBLE, id_memspace, id_dataspace, id_xfer_plist,  d);
-	result.resize(dim[0], dim[1]);
-	// opserr << " dim[0] = " << (int) dim[0] << endln;
-	// opserr << " dim[1] = " << (int) dim[1] << endln;
-	for (int i = 0; i < (int) dim[0]; ++i)
-	{
-		for (int j = 0; j < (int) dim[1]; ++j)
-		{
-			// opserr << "i = " << (int) i << " j = " << (int) j << endln;
-			// opserr << "d[i][j] = " << d[i][j] << endln;
-			// opserr << "d[i][j] = " << d[i + j*dim[1]] << endln;
-			// result(i, j) = d[i][j];
-			result(i, j) = d[i * dim[1] + j];
-		}
-	}
-
-	H5Sclose(id_dataspace);
-	H5Sclose(id_memspace);
-	H5Dclose(id_dataset);
-
-	// for (int i = 0; i < dim[0]; i++)
-	// 	delete [] d[i];
-	delete [] d;
-	return true;
-}
+// 	return true;
+// }
 
 
-bool read_int_dataset_into_array(const hid_t & h5drm_dataset, std::string dataset_name, int *& result)
-{
-	// opserr << "read_int_dataset_into_array dataset_name: " << dataset_name.c_str() << endln;
-	hid_t id_dataset = H5Dopen(h5drm_dataset, dataset_name.c_str(), H5P_DEFAULT);
-	hid_t id_dataspace = H5Dget_space(id_dataset);
-	int ndims = H5Sget_simple_extent_ndims( id_dataspace);
-	if (ndims != 2)
-	{
-		opserr << "H5DRM !! failure trying to open dataset: " << dataset_name.c_str() << endln;
-		opserr << "H5DRM !! read_int_dataset_into_array - array dimension should be 2\n";
-		Vector error(-1);
-		return false;
-	}
-	hsize_t dim[2];
-	hsize_t maxdim[2];
-	H5Sget_simple_extent_dims(id_dataspace, dim, maxdim);
-	H5Sselect_all( id_dataspace );
-	hid_t id_memspace  = H5Screate_simple(2, dim, 0);       // create dataspace of memory
-	hid_t id_xfer_plist = H5Pcreate(H5P_DATASET_XFER);
 
-	result = new int [dim[0]*dim[1]];
+// bool read_double_dataset_into_matrix(const hid_t & h5drm_dataset, std::string dataset_name, Matrix & result)
+// {
+// 	// opserr << "read_double_dataset_into_matrix dataset_name: " << dataset_name.c_str() << endln;
+// 	hid_t id_dataset = H5Dopen(h5drm_dataset, dataset_name.c_str(), H5P_DEFAULT);
+// 	hid_t id_dataspace = H5Dget_space(id_dataset);
+// 	int ndims = H5Sget_simple_extent_ndims( id_dataspace);
+// 	if (ndims != 2)
+// 	{
+// 		opserr << "H5DRM !! failure trying to open dataset: " << dataset_name.c_str() << endln;
+// 		opserr << "H5DRM !! read_double_dataset_into_matrix - array dimension should be 2\n";
+// 		Vector error(-1);
+// 		return false;
+// 	}
+// 	hsize_t dim[2];
+// 	hsize_t maxdim[2];
+// 	H5Sget_simple_extent_dims(id_dataspace, dim, maxdim);
+// 	H5Sselect_all( id_dataspace );
+// 	hid_t id_memspace  = H5Screate_simple(2, dim, 0);       // create dataspace of memory
+// 	hid_t id_xfer_plist = H5Pcreate(H5P_DATASET_XFER);
 
-	H5Dread( id_dataset, H5T_NATIVE_INT, id_memspace, id_dataspace, id_xfer_plist,  result);
+// 	//double d[dim[0]][dim[1]];
+// 	// double **d = new double *[(int) dim[0]];
+// 	double *d = new double [dim[0]*dim[1]];
 
-	H5Sclose(id_dataspace);
-	H5Sclose(id_memspace);
-	H5Dclose(id_dataset);
+// 	if (d == 0)
+// 	{
+// 		opserr << "Fatal! no memory! 2163" << endln;
+// 		exit(-1);
+// 	}
 
-	return true;
-}
+// 	// for (int i = 0; i < dim[0]; i++) {
+// 	// 	d[i] = new double [(int) dim[1]];
+
+// 	// 	if (d[i] == 0)
+// 	// 	{
+// 	// 		opserr << "Fatal! no memory! 2172" << endln;
+// 	// 		exit(-1);
+// 	// 	}
+// 	// }
+
+// 	H5Dread( id_dataset, H5T_NATIVE_DOUBLE, id_memspace, id_dataspace, id_xfer_plist,  d);
+// 	result.resize(dim[0], dim[1]);
+// 	// opserr << " dim[0] = " << (int) dim[0] << endln;
+// 	// opserr << " dim[1] = " << (int) dim[1] << endln;
+// 	for (int i = 0; i < (int) dim[0]; ++i)
+// 	{
+// 		for (int j = 0; j < (int) dim[1]; ++j)
+// 		{
+// 			// opserr << "i = " << (int) i << " j = " << (int) j << endln;
+// 			// opserr << "d[i][j] = " << d[i][j] << endln;
+// 			// opserr << "d[i][j] = " << d[i + j*dim[1]] << endln;
+// 			// result(i, j) = d[i][j];
+// 			result(i, j) = d[i * dim[1] + j];
+// 		}
+// 	}
+
+// 	H5Sclose(id_dataspace);
+// 	H5Sclose(id_memspace);
+// 	H5Dclose(id_dataset);
+
+// 	// for (int i = 0; i < dim[0]; i++)
+// 	// 	delete [] d[i];
+// 	delete [] d;
+// 	return true;
+// }
+
+
+// bool read_int_dataset_into_array(const hid_t & h5drm_dataset, std::string dataset_name, int *& result)
+// {
+// 	// opserr << "read_int_dataset_into_array dataset_name: " << dataset_name.c_str() << endln;
+// 	hid_t id_dataset = H5Dopen(h5drm_dataset, dataset_name.c_str(), H5P_DEFAULT);
+// 	hid_t id_dataspace = H5Dget_space(id_dataset);
+// 	int ndims = H5Sget_simple_extent_ndims( id_dataspace);
+// 	if (ndims != 2)
+// 	{
+// 		opserr << "H5DRM !! failure trying to open dataset: " << dataset_name.c_str() << endln;
+// 		opserr << "H5DRM !! read_int_dataset_into_array - array dimension should be 2\n";
+// 		Vector error(-1);
+// 		return false;
+// 	}
+// 	hsize_t dim[2];
+// 	hsize_t maxdim[2];
+// 	H5Sget_simple_extent_dims(id_dataspace, dim, maxdim);
+// 	H5Sselect_all( id_dataspace );
+// 	hid_t id_memspace  = H5Screate_simple(2, dim, 0);       // create dataspace of memory
+// 	hid_t id_xfer_plist = H5Pcreate(H5P_DATASET_XFER);
+
+// 	result = new int [dim[0]*dim[1]];
+
+// 	H5Dread( id_dataset, H5T_NATIVE_INT, id_memspace, id_dataspace, id_xfer_plist,  result);
+
+// 	H5Sclose(id_dataspace);
+// 	H5Sclose(id_memspace);
+// 	H5Dclose(id_dataset);
+
+// 	return true;
+// }
 
 
 

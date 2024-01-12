@@ -28,8 +28,10 @@ if (HDF5_FOUND)
 target_sources(OPS_Domain
     PRIVATE
         H5DRM.cpp
+        H5DRM2D.cpp
     PUBLIC
         H5DRM.h    
+        H5DRM2D.h    
 )
 endif()
 

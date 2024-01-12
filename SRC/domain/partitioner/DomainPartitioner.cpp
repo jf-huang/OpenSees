@@ -615,7 +615,7 @@ DomainPartitioner::partition(int numParts, bool usingMain, int mainPartitionTag,
 
   // add the single point constraints, 
   
-  opserr << "  * Sending homogeneous SP Constraints`\n";
+  opserr << "  * Sending homogeneous SP Constraints\n";
   SP_ConstraintIter &theDomainSP = myDomain->getSPs();
   SP_Constraint *spPtr;
   while ((spPtr = theDomainSP()) != 0) {

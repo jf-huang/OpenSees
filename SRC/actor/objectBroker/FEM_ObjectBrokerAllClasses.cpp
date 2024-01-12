@@ -201,6 +201,10 @@
 #include "CycLiqCPSP3D.h"
 #include "CycLiqCPSPPlaneStrain.h"
 
+#include "MultiaxialCyclicPlasticity.h"
+#include "MultiaxialCyclicPlasticity3D.h"
+#include "MultiaxialCyclicPlasticityAxiSymm.h"
+#include "MultiaxialCyclicPlasticityPlaneStrain.h"
 
 #include "soil/FluidSolidPorousMaterial.h"
 #include "soil/PressureDependMultiYield.h"
@@ -570,6 +574,7 @@
 
 #ifdef _H5DRM
 #include "drm/H5DRM.h"
+#include "drm/H5DRM2D.h"
 #endif
 
 #include "Parameter.h"
@@ -1846,6 +1851,15 @@ FEM_ObjectBrokerAllClasses::getNewNDMaterial(int classTag)
   case ND_TAG_J2CyclicBoundingSurfacePlaneStrain:
 	  return new J2CyclicBoundingSurfacePlaneStrain();
 
+  case ND_TAG_MultiaxialCyclicPlasticity:
+    return new MultiaxialCyclicPlasticity();
+  case ND_TAG_MultiaxialCyclicPlasticity3D:
+    return new MultiaxialCyclicPlasticity3D();
+  case ND_TAG_MultiaxialCyclicPlasticityAxiSymm:
+    return new MultiaxialCyclicPlasticityAxiSymm();
+  case ND_TAG_MultiaxialCyclicPlasticityPlaneStrain:
+    return new MultiaxialCyclicPlasticityPlaneStrain();
+
   case ND_TAG_InitialStateAnalysisWrapper:
       return new InitialStateAnalysisWrapper(); 
   case ND_TAG_stressDensity:
@@ -1978,6 +1992,8 @@ FEM_ObjectBrokerAllClasses::getNewLoadPattern(int classTag)
 #ifdef _H5DRM
     case PATTERN_TAG_H5DRM:
          return new H5DRM();
+    case PATTERN_TAG_H5DRM2D:
+         return new H5DRM2D();
 #endif
 	default:
 	     opserr << "FEM_ObjectBrokerAllClasses::getPtrLoadPattern - ";
