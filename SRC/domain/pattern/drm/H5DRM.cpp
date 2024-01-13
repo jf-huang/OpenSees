@@ -26,7 +26,7 @@
 // ============================================================================
 
 #define _H5DRM
-#define _PARALLEL_PROCESSING
+// #define _PARALLEL_PROCESSING
 
 #ifdef _H5DRM
 
@@ -47,6 +47,7 @@
 #include <Message.h>
 
 #if defined(_PARALLEL_PROCESSING) || defined(_PARALLEL_INTERPRETERS)
+#pragma message("_PARALLEL in H5DRM 3D defined")
 #include <mpi.h>
 #endif
 
@@ -268,6 +269,7 @@ H5DRM::H5DRM(
 	is_initialized = false;
 	t1 =  t2 =  tend = 0;
 	cFactor = cFactor_;
+	H5DRMout << " H5DRM() cFactor is " <<  cFactor << "\n";
 	step = step1 = step2 = 0;
 	myrank = 0;
 #if defined(_PARALLEL_PROCESSING) || defined(_PARALLEL_INTERPRETERS)
@@ -1849,11 +1851,19 @@ H5DRM::sendSelf(int commitTag, Channel & theChannel)
 {
 
 	H5DRMout << "sending filename: " << HDF5filename << endl;
+	H5DRMout << "sending cFactor is " <<  cFactor << "\n";
 
-	static Vector data(3);
+	static Vector data(16);
 	data(0) = cFactor;
 	data(1) = crd_scale;
 	data(2) = distance_tolerance;
+
+	data(3) = do_coordinate_transformation;
+	data(4)  = T(0, 0); data(5)  = T(0, 1); data(6)  = T(0, 2);
+	data(7)  = T(1, 0); data(8)  = T(1, 1); data(9)  = T(1, 2);
+	data(10) = T(2, 0); data(11) = T(2, 1); data(12) = T(2, 2);
+
+	data(13) = x0(0); data(14) = x0(1); data(15) = x0(2);
 
 	char drmfilename[H5DRM_MAX_FILENAME];
 	strcpy(drmfilename, HDF5filename.c_str());
@@ -1867,7 +1877,7 @@ H5DRM::sendSelf(int commitTag, Channel & theChannel)
 
 	if (theChannel.sendVector(0, 0, data) < 0)
 	{
-		cerr << "H5DRM::sendSelf -- failed to send cFactor\n";
+		cerr << "H5DRM::sendSelf -- failed to send cFactor and coordinate transformatin parameters\n";
 		return -1;
 	}
 
@@ -1880,7 +1890,7 @@ H5DRM::recvSelf(int commitTag, Channel & theChannel,
                 FEM_ObjectBroker & theBroker)
 {
 	H5DRMout << "receiving...\n";
-	static Vector data(3);
+	static Vector data(16);
 	char drmfilename[H5DRM_MAX_FILENAME];
 	Message filename_msg(drmfilename, H5DRM_MAX_FILENAME);
 
@@ -1894,12 +1904,19 @@ H5DRM::recvSelf(int commitTag, Channel & theChannel,
 
 	if (theChannel.recvVector(0, 0, data) < 0)
 	{
-		cerr << "H5DRM::receiveSelf -- failed to receive cFactor\n";
+		cerr << "H5DRM::receiveSelf -- failed to receive cFactor and coordinate transformatin parameters\n";
 		return -1;
 	}
 	cFactor = data(0);
 	crd_scale = data(1);
 	distance_tolerance = data(2);
+
+	do_coordinate_transformation = data(3);
+	T(0, 0) = data(4) ; T(0, 1) = data(5) ; T(0, 2) = data(6) ;
+	T(1, 0) = data(7) ; T(1, 1) = data(8) ; T(1, 2) = data(9) ;
+	T(2, 0) = data(10); T(2, 1) = data(11); T(2, 2) = data(12);
+
+	x0(0) = data(13); x0(1) = data(14); x0(2) = data(15);
 
 	HDF5filename = drmfilename;
 	H5DRMout << "received filename is " <<  drmfilename << "\n";
@@ -1920,9 +1937,9 @@ H5DRM::Print(ostream & s, int flag)
 LoadPattern *
 H5DRM::getCopy(void)
 {
-	return new H5DRM(this->getTag(), HDF5filename);
+	return new H5DRM(this->getTag(), HDF5filename, cFactor, crd_scale, distance_tolerance, do_coordinate_transformation, 
+    T(0, 0), T(0, 1), T(0, 2), T(1, 0), T(1, 1), T(1, 2), T(2, 0), T(2, 1), T(2, 2), x0(0), x0(1), x0(2));
 }
-
 
 
 Vector *
