@@ -184,6 +184,7 @@ MumpsParallelSolver::initializeMumps()
     needsSetSize = false;
     
     return info;
+    }
   }
 }
 

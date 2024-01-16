@@ -67,7 +67,7 @@ using namespace std;
 
 #define DEBUG_NODE_MATCHING false
 #define DEBUG_DRM_INTEGRATION false
-#define DEBUG_DRM_FORCES true
+#define DEBUG_DRM_FORCES false
 #define DEBUG_WITH_GMSH false
 
 
@@ -1014,7 +1014,7 @@ bool H5DRM2D::ComputeDRMMotions(double next_integration_time)
 
   if (have_computed)
   {
-    H5DRMout << " cFactor: " << cFactor << endln;
+    // H5DRMout << " cFactor: " << cFactor << endln;
     DRMDisplacements *= cFactor;
     DRMAccelerations *= cFactor;
   }
