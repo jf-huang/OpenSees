@@ -269,7 +269,7 @@ H5DRM::H5DRM(
 	is_initialized = false;
 	t1 =  t2 =  tend = 0;
 	cFactor = cFactor_;
-	H5DRMout << " H5DRM() cFactor is " <<  cFactor << "\n";
+	// H5DRMout << " H5DRM() cFactor is " <<  cFactor << "\n";
 	step = step1 = step2 = 0;
 	myrank = 0;
 #if defined(_PARALLEL_PROCESSING) || defined(_PARALLEL_INTERPRETERS)
@@ -1017,7 +1017,7 @@ bool H5DRM::ComputeDRMMotions(double next_integration_time)
 
   if (have_computed)
   {
-    // H5DRMout << " cFactor: " << cFactor << endln;
+    H5DRMout << " cFactor: " << cFactor << endln;
     DRMDisplacements *= cFactor;
     DRMAccelerations *= cFactor;
   }
@@ -1048,10 +1048,10 @@ bool H5DRM::drm_direct_read(double t)
 	double t2 = i2 * dt + tstart;
 	double dtau = (t - t1) / (t2 - t1);
 
-	if (myrank == 0)
-	{
-		H5DRMout << "t = " << t << " dt = " << dt << " i1 = " << i1 << " i2 = " << i2 << " t1 = " << t1 << " t2 = " << t2 << " dtau = " << dtau << endln;
-	}
+	// if (myrank == 0)
+	// {
+	// 	H5DRMout << "t = " << t << " dt = " << dt << " i1 = " << i1 << " i2 = " << i2 << " t1 = " << t1 << " t2 = " << t2 << " dtau = " << dtau << endln;
+	// }
 
 	id_acceleration_dataspace = H5Dget_space(id_acceleration);
 	id_displacement_dataspace = H5Dget_space(id_displacement);
@@ -1187,7 +1187,7 @@ bool H5DRM::drm_direct_read(double t)
 	}
 
 
-	H5DRMout << "t = " << t << " u = (" << umin << ", " << umax << ") a = (" << amin << ", " << amax << ")" << endln;
+	// H5DRMout << "t = " << t << " u = (" << umin << ", " << umax << ") a = (" << amin << ", " << amax << ")" << endln;
 
 	return true;
 }
@@ -1225,16 +1225,16 @@ bool H5DRM::drm_differentiate_displacements(double t)
 	i_last = i_last > (hsize_t) number_of_timesteps - 1 ? number_of_timesteps - 1 : i_last;
 
 	hsize_t i_len = (i_last - i_first) + 1;
-	H5DRMout << "t = " << t
-	         << " dt = " << dt
-	         << " i1 = " << i1
-	         << " i2 = " << i2
-	         << " i_first = " << i_first
-	         << " i_last = " << i_last
-	         << " i_len = " << i_len
-	         << " t1 = " << t1
-	         << " t2 = " << t2
-	         << " dtau = " << dtau << endln;
+	// H5DRMout << "t = " << t
+	//          << " dt = " << dt
+	//          << " i1 = " << i1
+	//          << " i2 = " << i2
+	//          << " i_first = " << i_first
+	//          << " i_last = " << i_last
+	//          << " i_len = " << i_len
+	//          << " t1 = " << t1
+	//          << " t2 = " << t2
+	//          << " dtau = " << dtau << endln;
 
 	double umax = -std::numeric_limits<double>::infinity();
 	double amax = -std::numeric_limits<double>::infinity();
@@ -1367,7 +1367,7 @@ bool H5DRM::drm_differentiate_displacements(double t)
 		DRMAccelerations(3 * local_pos + 2) = a1[2] * (1 - dtau) + a2[2] * (dtau);
 	}
 
-	H5DRMout << "t = " << t << " u = (" << umin << ", " << umax << ") a = (" << amin << ", " << amax << ")" << endln;
+	// H5DRMout << "t = " << t << " u = (" << umin << ", " << umax << ") a = (" << amin << ", " << amax << ")" << endln;
 
 	return true;
 }
@@ -1661,10 +1661,10 @@ bool H5DRM::drm_integrate_velocity(double next_integration_time)
 bool
 H5DRM::ComputeDRMLoads(double t)
 {
-	if (myrank == 0)
-	{
-		H5DRMout << "ComputeDRMLoads.... Begin (t = " <<  t << ").\n";
-	}
+	// if (myrank == 0)
+	// {
+	// 	H5DRMout << "ComputeDRMLoads.... Begin (t = " <<  t << ").\n";
+	// }
 
 
 	int NDOF = 3;
@@ -1815,10 +1815,10 @@ H5DRM::ComputeDRMLoads(double t)
 			}
 		}
 	}
-	if (myrank == 0)
-	{
-		H5DRMout << "ComputeDRMLoads.... Done.\n";
-	}
+	// if (myrank == 0)
+	// {
+	// 	H5DRMout << "ComputeDRMLoads.... Done.\n";
+	// }
 
 
 
@@ -2077,6 +2077,9 @@ void H5DRM::node_matching_BruteForce(double d_tol, const ID & internal, const Ma
 	int local_pos = 0;
 	while ((node_ptr = node_iter()) != 0)
 	{
+    if (node_ptr->getNumberDOF() > 3)
+      continue;
+
 		int tag = node_ptr->getTag();
 		const Vector& node_xyz  =  node_ptr->getCrds();
 		double dmin = std::numeric_limits<double>::infinity();
@@ -2184,6 +2187,15 @@ void H5DRM::node_matching_BruteForce(double d_tol, const ID & internal, const Ma
 		H5DRMout << "node_matching_BruteForce - End!\n";
 		H5DRMout << "Accounted for " << n_accounted_for << " out of " << Nstations << " stations\n";
 	}
+
+  // // ask user confirmation to proceed if stations found not matching the stations specified
+  // if (n_accounted_for < Nstations)
+  // {
+  //   do
+  //   {
+  //     H5DRMout << '\nWarning: did not find all specified DRM stations, press Enter to continue analysis...';
+  //   } while (cin.get() != '\n');
+  // }
 
 	return;
 }

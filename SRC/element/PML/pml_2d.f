@@ -174,6 +174,7 @@ c      double precision  ::  GMATRX(NDOFEL,NDOFEL)             ! Element G matri
       RD_depth = PROPS(9)
       Damp_alpha = PROPS(10)
       Damp_beta = PROPS(11)
+      th = PROPS(12) ! element thickness
 
       lambda = xnu*E/( (1.d0+xnu)*(1.d0-2.D0*xnu) )
       mu = 0.5D0*E/(1.d0+xnu)
@@ -469,6 +470,10 @@ c         DVDU = GAMMA/(BETA*DTIME)
           end do
         end do
         
+        MMATRX = th * MMATRX
+        CMATRX = th * CMATRX
+        KMATRX = th * KMATRX
+        GMATRX = th * GMATRX
         
 !        MMATRX = M_PML
 !        CMATRX = C_PML

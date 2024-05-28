@@ -213,21 +213,21 @@ void  PML2DVISCOUS::setDomain(Domain* theDomain)
 		coords, 
 		&MCRD,
 		&NNODE);
-	if (this->getTag() == 51) {
-		// save k matrix in file k.txt 
-		std::ofstream kfile;
-		kfile.open("k.txt");
-		for (int i = 0; i < PML2DVISCOUS_NUM_DOF; i++) {
-			for (int j = 0; j < PML2DVISCOUS_NUM_DOF; j++) {
-				if (j== PML2DVISCOUS_NUM_DOF-1) {
-					kfile << G[i*PML2DVISCOUS_NUM_DOF + j] << "\n";
-				} else {
-					kfile << G[i*PML2DVISCOUS_NUM_DOF + j] << ",";
-				}
-			}
+	// if (this->getTag() == 51) {
+	// 	// save k matrix in file k.txt 
+	// 	std::ofstream kfile;
+	// 	kfile.open("k.txt");
+	// 	for (int i = 0; i < PML2DVISCOUS_NUM_DOF; i++) {
+	// 		for (int j = 0; j < PML2DVISCOUS_NUM_DOF; j++) {
+	// 			if (j== PML2DVISCOUS_NUM_DOF-1) {
+	// 				kfile << G[i*PML2DVISCOUS_NUM_DOF + j] << "\n";
+	// 			} else {
+	// 				kfile << G[i*PML2DVISCOUS_NUM_DOF + j] << ",";
+	// 			}
+	// 		}
 
-		}
-	}
+	// 	}
+	// }
 	
 }
 

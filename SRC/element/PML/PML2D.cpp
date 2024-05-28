@@ -66,15 +66,16 @@ void* OPS_PML2D()
   }
   
   double dData[PML2D_NUM_PROPS]; num = PML2D_NUM_PROPS;
-  // make last two indicies zero 
-  dData[PML2D_NUM_PROPS-2] = 0.0;
-  dData[PML2D_NUM_PROPS-1] = 0.0;
 
   if (OPS_GetDoubleInput(&num,dData) < 0) {
     opserr<<"WARNING: invalid double data\n";
     return 0;
   }	
 
+  // make last two indicies zero 
+  dData[PML2D_NUM_PROPS-2] = 0.0;
+  dData[PML2D_NUM_PROPS-1] = 0.0;
+  
   return new PML2D(idata[0],&idata[1],dData);
 }
 
