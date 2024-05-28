@@ -1017,7 +1017,7 @@ bool H5DRM::ComputeDRMMotions(double next_integration_time)
 
   if (have_computed)
   {
-    H5DRMout << " cFactor: " << cFactor << endln;
+    // H5DRMout << " cFactor: " << cFactor << endln;
     DRMDisplacements *= cFactor;
     DRMAccelerations *= cFactor;
   }
