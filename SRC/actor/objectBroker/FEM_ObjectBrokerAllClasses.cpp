@@ -530,6 +530,7 @@
 #include "KrylovNewton.h"
 #include "AcceleratedNewton.h"
 #include "ModifiedNewton.h"
+#include "ExpressNewton.h"
 
 #include "accelerator/KrylovAccelerator.h"
 #include "accelerator/RaphsonAccelerator.h"
@@ -2467,7 +2468,10 @@ FEM_ObjectBrokerAllClasses::getNewEquiSolnAlgo(int classTag)
 
 	case EquiALGORITHM_TAGS_Broyden:  
 	     return new Broyden();
-	     
+
+  case EquiALGORITHM_TAGS_ExpressNewton:  
+	     return new ExpressNewton();
+
 	default:
 	     opserr << "FEM_ObjectBrokerAllClasses::getNewEquiSolnAlgo - ";
 	     opserr << " - no EquiSolnAlgo type exists for class tag ";

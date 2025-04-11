@@ -47,7 +47,7 @@
 class ExpressNewton: public EquiSolnAlgo
 {
   public:
-    ExpressNewton(int nIter, double kMultiplier, int tagent, int factorOnce);
+    ExpressNewton(int nIter = 2, double kMultiplier = 1.0, int tagent = CURRENT_TANGENT, int factorOnce = 0);
     ~ExpressNewton();
 
     int solveCurrentStep(void);
