@@ -2469,7 +2469,7 @@ FEM_ObjectBrokerAllClasses::getNewEquiSolnAlgo(int classTag)
 	case EquiALGORITHM_TAGS_Broyden:  
 	     return new Broyden();
 
-  case EquiALGORITHM_TAGS_ExpressNewton:  
+	case EquiALGORITHM_TAGS_ExpressNewton:  
 	     return new ExpressNewton();
 
 	default:

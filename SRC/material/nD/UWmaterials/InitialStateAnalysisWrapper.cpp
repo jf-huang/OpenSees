@@ -171,7 +171,7 @@ InitialStateAnalysisWrapper::revertToStart(void)
 {
   // update epsilon_o when InitialStateAnalysis off is called
   if (ops_InitialStateAnalysis) {
-    mEpsilon_o += mStrain;
+    mEpsilon_o = mStrain;
   }
   return theMainMaterial->revertToStart();
 }
