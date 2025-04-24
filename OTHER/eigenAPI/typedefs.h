@@ -26,8 +26,8 @@
 #define EigenAPI_typedefs_h
 
 #include "EigenAPI.h"
-#include "Eigen/Dense"
-#include <Eigen/Eigenvalues>
+#include "/usr/include/eigen3/Eigen/Dense"
+#include </usr/include/eigen3/Eigen/Eigenvalues>
 
 #include <iostream>
 #include <typeinfo>

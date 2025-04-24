@@ -113,9 +113,17 @@ else()
   find_package(HDF5 REQUIRED)
   find_package(TCL REQUIRED)
   find_package(Eigen3 REQUIRED)
-  include_directories(${TCL_INCLUDE_DIR})
-  set(TCL_INCLUDE_PATH ${TCL_INCLUDE_DIR})
-  set(TCL_LIBRARY ${TCL_LIBRARIES})
+  include_directories(${TCL_INCLUDE_PATH})
+  # set(TCL_INCLUDE_PATH ${TCL_INCLUDE_DIR})
+  # set(TCL_LIBRARY ${TCL_LIBRARIES})
+  message(STATUS "TCL_INCLUDE_PATH is: ${TCL_INCLUDE_PATH}")
+  message(STATUS "TCL_LIBRARY is: ${TCL_LIBRARY}")
+
+  message(STATUS "EIGEN3_INCLUDE_DIR is: ${EIGEN3_INCLUDE_DIR}")
+  set (Eigen3_FOUND TRUE)
+
+  # set(CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR} ${CMAKE_MODULE_PATH})
+  # set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR} ${CMAKE_PREFIX_PATH})
 
 endif()
 
@@ -614,7 +622,7 @@ if(MPI_FOUND)
       ${OPS_SRC_DIR}/system_of_eqn/linearSOE/sparseGEN/DistributedSparseGenRowLinSOE.cpp
       ${OPS_SRC_DIR}/domain/subdomain/ActorSubdomain.cpp
       ${OPS_SRC_DIR}/domain/subdomain/ShadowSubdomain.cpp
-      ${OPS_SRC_DIR}/domain/pattern/drm/H5DRM.cpp
+      ${OPS_SRC_DIR}/domain/pattern/drm/H5DRMLoadPattern.cpp
       ${OPS_SRC_DIR}/domain/pattern/drm/H5DRM2D.cpp
     )
 
@@ -632,6 +640,7 @@ if(MPI_FOUND)
 
     target_link_libraries(OpenSeesSP 
        OPS_InterpTcl 
+       coordTransformation
        OpenSeesLIB
        OPS_Reliability
        OPS_ReliabilityTcl
@@ -675,7 +684,7 @@ if(MPI_FOUND)
       ${OPS_SRC_DIR}/system_of_eqn/linearSOE/mumps/MumpsParallelSolver.cpp
       ${OPS_SRC_DIR}/domain/subdomain/ActorSubdomain.cpp
       ${OPS_SRC_DIR}/domain/subdomain/ShadowSubdomain.cpp
-      ${OPS_SRC_DIR}/domain/pattern/drm/H5DRM.cpp
+      ${OPS_SRC_DIR}/domain/pattern/drm/H5DRMLoadPattern.cpp
       ${OPS_SRC_DIR}/domain/pattern/drm/H5DRM2D.cpp
     )
 
@@ -697,6 +706,7 @@ if(MPI_FOUND)
     
     target_link_libraries(OpenSeesMP 
        OPS_InterpTcl 
+       coordTransformation
        OpenSeesLIB
        OPS_Reliability
        OPS_ReliabilityTcl

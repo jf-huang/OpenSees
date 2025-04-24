@@ -34,7 +34,7 @@
 #include <math.h>
 #include <time.h>
 #include <hdf5.h>
-#include <H5DRM.h>
+#include <H5DRMLoadPattern.h>
 
 #include <Channel.h>
 #include <elementAPI.h>
@@ -81,7 +81,7 @@ bool read_int_dataset_into_array(const hid_t& h5drm_dataset, std::string dataset
 
 static int numH5DRMpatterns = 0;
 
-void* OPS_H5DRM()
+void* OPS_H5DRMLoadPattern()
 {
 
 	if (numH5DRMpatterns == 0)
@@ -159,7 +159,7 @@ void* OPS_H5DRM()
 
 
 
-	thePattern = new H5DRM(tag, filename,
+	thePattern = new H5DRMLoadPattern(tag, filename,
 	                       factor,
 	                       crd_scale,
 	                       distance_tolerance,
@@ -191,7 +191,7 @@ void* OPS_H5DRM()
 
 
 
-H5DRM::H5DRM()
+H5DRMLoadPattern::H5DRMLoadPattern()
 	: LoadPattern(0, PATTERN_TAG_H5DRM),
 	  DRMForces(100),
 	  DRMDisplacements(100),
@@ -234,7 +234,7 @@ H5DRM::H5DRM()
 	H5DRMout << "H5DRM - empty constructor\n";
 }
 
-H5DRM::H5DRM(
+H5DRMLoadPattern::H5DRMLoadPattern(
     int tag,
     std::string HDF5filename_,
     double cFactor_,
@@ -267,7 +267,7 @@ H5DRM::H5DRM(
 	is_initialized = false;
 	t1 =  t2 =  tend = 0;
 	cFactor = cFactor_;
-	// H5DRMout << " H5DRM() cFactor is " <<  cFactor << "\n";
+	// H5DRMout << " H5DRMLoadPattern() cFactor is " <<  cFactor << "\n";
 	step = step1 = step2 = 0;
 	myrank = 0;
 #if defined(_PARALLEL_PROCESSING) || defined(_PARALLEL_INTERPRETERS)
@@ -322,7 +322,7 @@ H5DRM::H5DRM(
 // }
 
 
-void H5DRM::intitialize()
+void H5DRMLoadPattern::intitialize()
 {
 	Domain *theDomain = this->getDomain();
 
@@ -743,7 +743,7 @@ void H5DRM::intitialize()
 
 
 
-H5DRM::~H5DRM()
+H5DRMLoadPattern::~H5DRMLoadPattern()
 {
 	clean_all_data();
 	// for (int i = 0; i < 10; ++i)
@@ -754,7 +754,7 @@ H5DRM::~H5DRM()
 	// planes.clear();
 }
 
-void H5DRM::clean_all_data()
+void H5DRMLoadPattern::clean_all_data()
 {
 
 	nodetag2station_id.clear();
@@ -844,14 +844,14 @@ void H5DRM::clean_all_data()
 }
 
 void
-H5DRM::setDomain(Domain * theDomain)
+H5DRMLoadPattern::setDomain(Domain * theDomain)
 {
 	this->LoadPattern::setDomain(theDomain);
 }
 
 
 void
-H5DRM::applyLoad(double time)
+H5DRMLoadPattern::applyLoad(double time)
 {
 	if (!is_initialized)
 	{
@@ -871,7 +871,7 @@ H5DRM::applyLoad(double time)
 
 		if (theDomain == 0 || Elements.Size() == 0 || !computedLoads)
 		{
-			opserr << "H5DRM::applyLoad -- Error! Failed to compute DRM loads at time = " << time << endln;
+			opserr << "H5DRMLoadPattern::applyLoad -- Error! Failed to compute DRM loads at time = " << time << endln;
 			return;
 		}
 
@@ -980,7 +980,7 @@ H5DRM::applyLoad(double time)
 }
 
 
-bool H5DRM::ComputeDRMMotions(double next_integration_time)
+bool H5DRMLoadPattern::ComputeDRMMotions(double next_integration_time)
 {
 	bool have_displacement = id_displacement > 0;
 	bool have_acceleration = id_acceleration > 0;
@@ -1022,7 +1022,7 @@ bool H5DRM::ComputeDRMMotions(double next_integration_time)
 	return have_computed;
 }
 
-bool H5DRM::drm_direct_read(double t)
+bool H5DRMLoadPattern::drm_direct_read(double t)
 {
 
 	if (Nodes.Size() == 0)
@@ -1146,7 +1146,7 @@ bool H5DRM::drm_direct_read(double t)
 
 		if (errorflag1 < 0 || errorflag2 < 0 || errorflag3 < 0 || errorflag4 < 0 || nanfound)
 		{
-			H5DRMerror << "H5DRM::drm_direct_read - Failed to read displacement or acceleration array!!\n" <<
+			H5DRMerror << "H5DRMLoadPattern::drm_direct_read - Failed to read displacement or acceleration array!!\n" <<
 			           " n = " << n << endln <<
 			           " nodeTag = " << nodeTag << endln <<
 			           " station_id = " << station_id << endln <<
@@ -1191,7 +1191,7 @@ bool H5DRM::drm_direct_read(double t)
 }
 
 
-bool H5DRM::drm_differentiate_displacements(double t)
+bool H5DRMLoadPattern::drm_differentiate_displacements(double t)
 {
 
 	if (Nodes.Size() == 0)
@@ -1370,7 +1370,7 @@ bool H5DRM::drm_differentiate_displacements(double t)
 	return true;
 }
 
-bool H5DRM::drm_integrate_velocity(double next_integration_time)
+bool H5DRMLoadPattern::drm_integrate_velocity(double next_integration_time)
 {
 
 	exit(-1);
@@ -1657,7 +1657,7 @@ bool H5DRM::drm_integrate_velocity(double next_integration_time)
 
 
 bool
-H5DRM::ComputeDRMLoads(double t)
+H5DRMLoadPattern::ComputeDRMLoads(double t)
 {
 	// if (myrank == 0)
 	// {
@@ -1845,7 +1845,7 @@ H5DRM::ComputeDRMLoads(double t)
 
 
 int
-H5DRM::sendSelf(int commitTag, Channel & theChannel)
+H5DRMLoadPattern::sendSelf(int commitTag, Channel & theChannel)
 {
 
 	H5DRMout << "sending filename: " << HDF5filename << endl;
@@ -1869,13 +1869,13 @@ H5DRM::sendSelf(int commitTag, Channel & theChannel)
 
 	if (theChannel.sendMsg(0, 0, filename_msg) < 0)
 	{
-		cerr << "H5DRM::sendSelf -- failed to send HDF5filename\n";
+		cerr << "H5DRMLoadPattern::sendSelf -- failed to send HDF5filename\n";
 		return -1;
 	}
 
 	if (theChannel.sendVector(0, 0, data) < 0)
 	{
-		cerr << "H5DRM::sendSelf -- failed to send cFactor and coordinate transformatin parameters\n";
+		cerr << "H5DRMLoadPattern::sendSelf -- failed to send cFactor and coordinate transformatin parameters\n";
 		return -1;
 	}
 
@@ -1884,7 +1884,7 @@ H5DRM::sendSelf(int commitTag, Channel & theChannel)
 }
 
 int
-H5DRM::recvSelf(int commitTag, Channel & theChannel,
+H5DRMLoadPattern::recvSelf(int commitTag, Channel & theChannel,
                 FEM_ObjectBroker & theBroker)
 {
 	H5DRMout << "receiving...\n";
@@ -1896,13 +1896,13 @@ H5DRM::recvSelf(int commitTag, Channel & theChannel,
 
 	if (theChannel.recvMsg(0, 0, filename_msg) < 0)
 	{
-		cerr << "H5DRM::receiveSelf -- failed to receive HDF5filename\n";
+		cerr << "H5DRMLoadPattern::receiveSelf -- failed to receive HDF5filename\n";
 		return -1;
 	}
 
 	if (theChannel.recvVector(0, 0, data) < 0)
 	{
-		cerr << "H5DRM::receiveSelf -- failed to receive cFactor and coordinate transformatin parameters\n";
+		cerr << "H5DRMLoadPattern::receiveSelf -- failed to receive cFactor and coordinate transformatin parameters\n";
 		return -1;
 	}
 	cFactor = data(0);
@@ -1924,7 +1924,7 @@ H5DRM::recvSelf(int commitTag, Channel & theChannel,
 }
 
 void
-H5DRM::Print(ostream & s, int flag)
+H5DRMLoadPattern::Print(ostream & s, int flag)
 {
 
 }
@@ -1933,15 +1933,15 @@ H5DRM::Print(ostream & s, int flag)
 
 // method to obtain a blank copy of the LoadPattern
 LoadPattern *
-H5DRM::getCopy(void)
+H5DRMLoadPattern::getCopy(void)
 {
-	return new H5DRM(this->getTag(), HDF5filename, cFactor, crd_scale, distance_tolerance, do_coordinate_transformation, 
+	return new H5DRMLoadPattern(this->getTag(), HDF5filename, cFactor, crd_scale, distance_tolerance, do_coordinate_transformation, 
     T(0, 0), T(0, 1), T(0, 2), T(1, 0), T(1, 1), T(1, 2), T(2, 0), T(2, 1), T(2, 2), x0(0), x0(1), x0(2));
 }
 
 
 Vector *
-H5DRM::getNodalLoad(int nodeTag, double time)
+H5DRMLoadPattern::getNodalLoad(int nodeTag, double time)
 {
 
 
@@ -1951,7 +1951,7 @@ H5DRM::getNodalLoad(int nodeTag, double time)
 
 
 
-void H5DRM::node_matching_UsePlaneInfo(double d_tol, const ID & internal, const Matrix & xyz, const Vector & drmbox_x0, double & d_err, int & n_nodes_found)
+void H5DRMLoadPattern::node_matching_UsePlaneInfo(double d_tol, const ID & internal, const Matrix & xyz, const Vector & drmbox_x0, double & d_err, int & n_nodes_found)
 {
 
 	// char debugfilename[100];
@@ -2033,14 +2033,14 @@ void H5DRM::node_matching_UsePlaneInfo(double d_tol, const ID & internal, const 
 
 
 
-void H5DRM::node_matching_OctTree(double d_tol, const ID & internal, const Matrix & xyz, const Vector & drmbox_x0, double & d_err, int & n_nodes_found)
+void H5DRMLoadPattern::node_matching_OctTree(double d_tol, const ID & internal, const Matrix & xyz, const Vector & drmbox_x0, double & d_err, int & n_nodes_found)
 {
 	return;
 }
 
 
 
-void H5DRM::node_matching_BruteForce(double d_tol, const ID & internal, const Matrix & xyz, const Vector & drmbox_x0, double & d_err, int & n_nodes_found)
+void H5DRMLoadPattern::node_matching_BruteForce(double d_tol, const ID & internal, const Matrix & xyz, const Vector & drmbox_x0, double & d_err, int & n_nodes_found)
 {
 
 	if (myrank == 0)

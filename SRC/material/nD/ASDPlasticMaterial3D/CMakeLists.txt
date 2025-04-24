@@ -19,6 +19,7 @@ target_sources(OPS_Material
 )
 
 target_include_directories(OPS_Material PUBLIC ${CMAKE_CURRENT_LIST_DIR})
+target_include_directories(OPS_Material PUBLIC ${Eigen3_INCLUDE_DIR})
 
 add_subdirectory(ElasticityModels)
 add_subdirectory(PlasticFlowDirections)

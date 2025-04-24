@@ -107,9 +107,9 @@
 #define H5DRM_MAX_RETURN_OPEN_OBJS 100
 #define H5DRM_MAX_FILENAME 200
 #define H5DRM_MAX_STRINGSIZE 80
-#define H5DRMerror std::cerr  << "H5DRM(" << myrank << ") - ERROR: "
-#define H5DRMwarning std::cout  <<  "H5DRM(" << myrank << ") - Warning: "
-#define H5DRMout std::cout  << "H5DRM(" << myrank << ") : "
+#define H5DRMerror std::cerr  << "H5DRMLoadPattern(" << myrank << ") - ERROR: "
+#define H5DRMwarning std::cout  <<  "H5DRMLoadPattern(" << myrank << ") - Warning: "
+#define H5DRMout std::cout  << "H5DRMLoadPattern(" << myrank << ") : "
 
 class Vector;
 class Matrix;
@@ -143,11 +143,11 @@ class Matrix;
 
 
 
-class H5DRM : public LoadPattern
+class H5DRMLoadPattern : public LoadPattern
 {
 public:
-    H5DRM();
-    H5DRM(int tag, std::string HDF5filename_, double cFactor_ = 1.0, 
+    H5DRMLoadPattern();
+    H5DRMLoadPattern(int tag, std::string HDF5filename_, double cFactor_ = 1.0, 
           double crd_scale_ = 1, 
           double distance_tolerance_ = 1e-3, 
           bool do_coordinate_transformation = true,
@@ -155,7 +155,7 @@ public:
         double T10 = 0.0, double T11 = 1.0, double T12 = 0.0,
         double T20 = 0.0, double T21 = 0.0, double T22 = 1.0,
         double x00 = 0.0, double x01 = 0.0, double x02 = 0.0);
-    ~H5DRM();
+    ~H5DRMLoadPattern();
     void clean_all_data(); // Called by destructor and if domain changes
 
     void setDomain(Domain *theDomain);

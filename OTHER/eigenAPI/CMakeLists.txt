@@ -14,3 +14,4 @@
 
 target_include_directories(EIGENAPI PUBLIC ${CMAKE_CURRENT_LIST_DIR})
 target_include_directories(EIGENAPI PUBLIC ${CMAKE_CURRENT_LIST_DIR}/eigen)
+target_include_directories(EIGENAPI PUBLIC ${Eigen3_INCLUDE_DIR})
