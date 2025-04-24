@@ -13,7 +13,8 @@ OBJS       = Mesh3DSubdomain.o \
 	DRMLoadPatternWrapper.o \
 	DRMInputHandler.o \
 	PlaneDRMInputHandler.o \
-	$(H5_FILE)
+	$(H5_FILE) \
+	H5DRM2D.o
 
 all:         $(OBJS)
 

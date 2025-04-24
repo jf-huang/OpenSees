@@ -21,6 +21,7 @@ all:
 	@$(CD) $(FE)/utility; $(MAKE);
 	@$(CD) $(FE)/convergenceTest; $(MAKE)
 	@$(CD) $(FE)/recorder; $(MAKE);
+	@$(CD) $(FE)/damping; $(MAKE);
 	@$(CD) $(FE)/tcl; $(MAKE);
 	@$(CD) $(FE)/renderer; $(MAKE);
 	@$(CD) $(FE)/domain; $(MAKE);
@@ -82,6 +83,7 @@ all:
 	@$(CD) $(FE)/utility; $(MAKE);
 	@$(CD) $(FE)/convergenceTest; $(MAKE);
 	@$(CD) $(FE)/recorder; $(MAKE);
+	@$(CD) $(FE)/damping; $(MAKE);
 	@$(CD) $(FE)/tcl; $(MAKE);
 	@$(CD) $(FE)/renderer; $(MAKE);
 	@$(CD) $(FE)/domain; $(MAKE);
@@ -254,7 +256,12 @@ REMO_LIBS = $(FE)/element/nonlinearBeamColumn/matrixutil/MatrixUtil.o \
 	$(FE)/coordTransformation/LinearCrdTransf3d.o \
 	$(FE)/coordTransformation/PDeltaCrdTransf3d.o \
 	$(FE)/coordTransformation/CorotCrdTransf3d.o \
-	$(FE)/coordTransformation/CorotCrdTransfWarping3d.o
+	$(FE)/coordTransformation/CorotCrdTransfWarping3d.o \
+	$(FE)/damping/Damping.o \
+	$(FE)/damping/SecStifDamping.o \
+	$(FE)/damping/UniformDamping.o \
+	$(FE)/damping/URDDamping.o \
+	$(FE)/damping/URDDampingbeta.o
 
 LAW_LIBS = $(FE)/system_of_eqn/linearSOE/sparseSYM/SymSparseLinSOE.o \
 	$(FE)/system_of_eqn/linearSOE/sparseSYM/SymSparseLinSolver.o \
@@ -683,6 +690,7 @@ ELE_LIBS   =  $(FE)/element/Element.o \
 	$(FE)/element/UWelements/Tcl_generateInterfacePoints.o \
 	$(FE)/element/PML/pml_3d.o \
     $(FE)/element/PML/PML3D.o \
+	$(FE)/element/PML/PML3DVISCOUS.o \
     $(FE)/element/PML/pml_2d.o \
     $(FE)/element/PML/PML2D.o \
 	$(FE)/element/PML/PML2D_3.o \
@@ -971,6 +979,7 @@ MATERIAL_LIBS   =  $(FE)/material/Material.o \
 	$(FE)/material/nD/PlasticDamageConcretePlaneStress.o \
 	$(FE)/element/PML/pml_3d.o \
     $(FE)/element/PML/PML3D.o \
+	$(FE)/element/PML/PML3DVISCOUS.o \
     $(FE)/element/PML/pml_2d.o \
     $(FE)/element/PML/PML2D.o \
 	$(FE)/element/PML/PML2D_3.o \
@@ -1564,6 +1573,7 @@ wipe: spotless
 	@$(CD) $(FE)/api; $(MAKE) wipe;
 	@$(CD) $(FE)/interpreter; $(MAKE) wipe;
 	@$(CD) $(FE)/damage; $(MAKE) wipe;
+	@$(CD) $(FE)/damping; $(MAKE) wipe;
 	@$(CD) $(FE)/string; $(MAKE) wipe;
 	@$(CD) $(FE)/damping; $(MAKE) wipe;
 

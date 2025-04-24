@@ -611,6 +611,7 @@
 #define PATTERN_TAG_PBowlLoading          4
 #define PATTERN_TAG_DRMLoadPattern        5
 #define PATTERN_TAG_H5DRM                 6
+#define PATTERN_TAG_H5DRM2D               7
 
 #define LOAD_TAG_Beam2dUniformLoad        3
 #define LOAD_TAG_Beam2dPointLoad          4
@@ -895,6 +896,8 @@
 #define ELE_TAG_ShellNLDKGTThermal		   268 // Giovanni Rinaldin
 #define ELE_TAG_Pipe                      269
 #define ELE_TAG_CurvedPipe                      270
+#define ELE_TAG_PML3DVISCOUS              271
+
 
 
 #define FRN_TAG_Coulomb            1

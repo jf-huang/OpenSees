@@ -13,6 +13,7 @@ target_sources(damping
     UniformDamping.cpp
     URDDamping.cpp
     URDDampingbeta.cpp
+    TclDampingCommand.cpp
     PUBLIC
     Damping.h
     SecStifDamping.h

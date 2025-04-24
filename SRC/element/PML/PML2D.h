@@ -41,7 +41,7 @@
 #include <Node.h>
 
 #define PML2D_NUM_DOF 20
-#define PML2D_NUM_PROPS 11
+#define PML2D_NUM_PROPS 12
 #define PML2D_NUM_NODES 4
 
 

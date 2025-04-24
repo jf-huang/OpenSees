@@ -614,6 +614,8 @@ if(MPI_FOUND)
       ${OPS_SRC_DIR}/system_of_eqn/linearSOE/sparseGEN/DistributedSparseGenRowLinSOE.cpp
       ${OPS_SRC_DIR}/domain/subdomain/ActorSubdomain.cpp
       ${OPS_SRC_DIR}/domain/subdomain/ShadowSubdomain.cpp
+      ${OPS_SRC_DIR}/domain/pattern/drm/H5DRM.cpp
+      ${OPS_SRC_DIR}/domain/pattern/drm/H5DRM2D.cpp
     )
 
 
@@ -673,6 +675,8 @@ if(MPI_FOUND)
       ${OPS_SRC_DIR}/system_of_eqn/linearSOE/mumps/MumpsParallelSolver.cpp
       ${OPS_SRC_DIR}/domain/subdomain/ActorSubdomain.cpp
       ${OPS_SRC_DIR}/domain/subdomain/ShadowSubdomain.cpp
+      ${OPS_SRC_DIR}/domain/pattern/drm/H5DRM.cpp
+      ${OPS_SRC_DIR}/domain/pattern/drm/H5DRM2D.cpp
     )
 
     target_include_directories(OpenSeesMP PRIVATE ${MUMPS_DIR}/_deps/mumps-src/include ${MPI_CXX_INCLUDE_DIRS})

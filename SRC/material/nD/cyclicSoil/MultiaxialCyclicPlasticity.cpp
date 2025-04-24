@@ -253,7 +253,7 @@ MultiaxialCyclicPlasticity::MultiaxialCyclicPlasticity(int    tag,
 						       double Parameter_beta,
 						       double Kcoeff,
 						       double viscosity)
-  : NDMaterial(tag, ND_TAG_MultiaxialCyclicPlasticity),
+  : NDMaterial(tag, classTag),
     stress(3,3), strain(3,3), stress_n(3,3), strain_n(3,3), 
     backs(3,3), backs_n(3,3), so(3,3), so_n(3,3)
 {

@@ -268,6 +268,10 @@
 #include "CycLiqCPSP3D.h"
 #include "CycLiqCPSPPlaneStrain.h"
 
+#include "MultiaxialCyclicPlasticity.h"
+#include "MultiaxialCyclicPlasticity3D.h"
+#include "MultiaxialCyclicPlasticityAxiSymm.h"
+#include "MultiaxialCyclicPlasticityPlaneStrain.h"
 
 #include "soil/FluidSolidPorousMaterial.h"
 #include "soil/PressureDependMultiYield.h"
@@ -420,6 +424,7 @@
 #include "PML/PML2D_5.h"
 #include "PML/PML2D_12.h"
 #include "PML/PML2DVISCOUS.h"
+#include "PML/PML3DVISCOUS.h"
 
 
 #include "UP-ucsd/Nine_Four_Node_QuadUP.h"
@@ -622,6 +627,7 @@
 #include "KrylovNewton.h"
 #include "AcceleratedNewton.h"
 #include "ModifiedNewton.h"
+#include "ExpressNewton.h"
 
 #include "accelerator/KrylovAccelerator.h"
 #include "accelerator/RaphsonAccelerator.h"
@@ -704,6 +710,7 @@
 
 #ifdef _H5DRM
 #include "drm/H5DRMLoadPattern.h"
+#include "drm/H5DRM2D.h"
 #endif
 
 #include "Parameter.h"
@@ -1060,6 +1067,9 @@ FEM_ObjectBrokerAllClasses::getNewElement(int classTag)
 	case ELE_TAG_PML2DVISCOUS:
 	  return new PML2DVISCOUS(); // Amin Pakzad
 	
+	case ELE_TAG_PML3DVISCOUS:
+	  return new PML3DVISCOUS(); // Amin Pakzad
+
     case ELE_TAG_BeamContact2D:
       return new BeamContact2D();
       
@@ -2362,6 +2372,15 @@ FEM_ObjectBrokerAllClasses::getNewNDMaterial(int classTag)
   case ND_TAG_J2CyclicBoundingSurfacePlaneStrain:
 	  return new J2CyclicBoundingSurfacePlaneStrain();
 
+  case ND_TAG_MultiaxialCyclicPlasticity:
+    return new MultiaxialCyclicPlasticity();
+  case ND_TAG_MultiaxialCyclicPlasticity3D:
+    return new MultiaxialCyclicPlasticity3D();
+  case ND_TAG_MultiaxialCyclicPlasticityAxiSymm:
+    return new MultiaxialCyclicPlasticityAxiSymm();
+  case ND_TAG_MultiaxialCyclicPlasticityPlaneStrain:
+    return new MultiaxialCyclicPlasticityPlaneStrain();
+
   case ND_TAG_InitialStateAnalysisWrapper:
       return new InitialStateAnalysisWrapper(); 
   case ND_TAG_stressDensity:
@@ -2522,6 +2541,8 @@ FEM_ObjectBrokerAllClasses::getNewLoadPattern(int classTag)
 #ifdef _H5DRM
     case PATTERN_TAG_H5DRM:
          return new H5DRMLoadPattern();
+    case PATTERN_TAG_H5DRM2D:
+         return new H5DRM2D();
 #endif
 	default:
 	     opserr << "FEM_ObjectBrokerAllClasses::getPtrLoadPattern - ";
@@ -2851,7 +2872,10 @@ FEM_ObjectBrokerAllClasses::getNewEquiSolnAlgo(int classTag)
 
 	case EquiALGORITHM_TAGS_Broyden:  
 	     return new Broyden();
-	     
+
+	case EquiALGORITHM_TAGS_ExpressNewton:  
+	     return new ExpressNewton();
+
 	default:
 	     opserr << "FEM_ObjectBrokerAllClasses::getNewEquiSolnAlgo - ";
 	     opserr << " - no EquiSolnAlgo type exists for class tag ";

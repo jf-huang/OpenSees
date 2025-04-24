@@ -15,6 +15,7 @@ target_sources(OPS_Domain
     DRMInputHandler.cpp
     PlaneDRMInputHandler.cpp
     H5DRMLoadPattern.cpp
+    H5DRM2D.cpp
     PUBLIC
     Mesh3DSubdomain.h
     GeometricBrickDecorator.h
@@ -24,6 +25,7 @@ target_sources(OPS_Domain
     DRMInputHandler.h
     PlaneDRMInputHandler.h
     H5DRMLoadPattern.h
+    H5DRM2D.h
 )
 
 # if (HDF5_FOUND)
