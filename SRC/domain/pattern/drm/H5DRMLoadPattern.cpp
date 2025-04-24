@@ -25,8 +25,6 @@
 // Please read detailed description in H5DRM.h.
 // ============================================================================
 
-#define _H5DRM
-// #define _PARALLEL_PROCESSING
 
 #ifdef _H5DRM
 
