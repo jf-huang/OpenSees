@@ -1005,7 +1005,7 @@ int OPS_SP()
 
     // get sp const
     bool isSpConst = false;
-    bool retZeroInitValue = true;
+    bool retZeroInitValue = false;
     
     bool userPattern = false;
     int loadPatternTag = 0;
@@ -1014,7 +1014,7 @@ int OPS_SP()
 	if(strcmp(type, "-const") == 0) {
 	    isSpConst = true;
 	    
-	} else if (strcmp(type,"-subtractInit") == 0) {
+	} else if (strcmp(type,"-useZeroInit") == 0) {
 	  // allow user to ignore init disp values at the node
 	  retZeroInitValue = true;
 
