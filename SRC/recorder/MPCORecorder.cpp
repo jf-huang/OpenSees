@@ -62,7 +62,7 @@ loads hdf5 shared library at runtime. if uncommented, hdf5 will be linked static
 enables SWMR (Single Writer - Multiple Readers) to allow reading this database from multiple processes
 while opensees is writing data. Warning: this is a new feature in hdf5 version 1.10.0.
 */
-#define MPCO_USE_SWMR
+// #define MPCO_USE_SWMR
 
 // opensees
 #include "MPCORecorder.h"
